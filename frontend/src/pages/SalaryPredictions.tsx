@@ -96,13 +96,16 @@ export default function SalaryPredictions() {
           <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid rgba(59,130,246,0.3)', borderTopColor: 'var(--accent-blue)', animation: 'spin 0.8s linear infinite' }} />
           Running wage model simulations…
         </div>
-      ) : salaryPredictions.length === 0 ? (
+      ) : salaryPredictions.length === 0 || (recommendations.length > 0 && (recommendations[0].similarity_score ?? 0) < 0.1) ? (
         <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <DollarSign size={48} style={{ color: 'var(--text-muted)', marginBottom: '1rem' }} />
-          <h3 style={{ marginBottom: '0.75rem' }}>No Salary Data Available</h3>
-          <p style={{ color: 'var(--text-secondary)' }}>
-            Add skills and career goals to your profile to generate salary predictions.
+          <DollarSign size={48} style={{ color: 'var(--success)', marginBottom: '1rem' }} />
+          <h3 style={{ marginBottom: '0.75rem' }}>Salary Forecast Inactive 💰</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--spacing-xl)', maxWidth: '500px', margin: '0 auto var(--spacing-xl)' }}>
+            Salary predictions require your skill profile and target career goals. Add skills in your profile to forecast your 5-year earning potential.
           </p>
+          <button className="btn btn-primary" onClick={() => window.location.href = '/profile'}>
+            Set Up Profile →
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-lg">
