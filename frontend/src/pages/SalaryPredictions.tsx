@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTwinStore, type SalaryPrediction } from '../stores/twinStore';
+import { useProfileStore } from '../stores/profileStore';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
@@ -53,13 +54,14 @@ function SalaryCard({ pred, isSelected, onClick }: { pred: SalaryPrediction; isS
 
 export default function SalaryPredictions() {
   const { salaryPredictions, fetchSalaryPredictions, isLoadingSalary, recommendations } = useTwinStore();
+  const { profile, fetchProfile } = useProfileStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Auto-load using top recommended career IDs
+    fetchProfile();
     const topIds = recommendations.slice(0, 5).map(r => r.career_id).filter(Boolean);
     fetchSalaryPredictions(topIds.length > 0 ? topIds : undefined);
-  }, [recommendations, fetchSalaryPredictions]);
+  }, [recommendations, fetchSalaryPredictions, fetchProfile]);
 
   useEffect(() => {
     if (salaryPredictions.length > 0 && !selectedId) {
@@ -96,7 +98,7 @@ export default function SalaryPredictions() {
           <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid rgba(59,130,246,0.3)', borderTopColor: 'var(--accent-blue)', animation: 'spin 0.8s linear infinite' }} />
           Running wage model simulations…
         </div>
-      ) : salaryPredictions.length === 0 || (recommendations.length > 0 && (recommendations[0].similarity_score ?? 0) < 0.1) ? (
+      ) : salaryPredictions.length === 0 || (profile?.total_skills_count ?? 0) === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <DollarSign size={48} style={{ color: 'var(--success)', marginBottom: '1rem' }} />
           <h3 style={{ marginBottom: '0.75rem' }}>Salary Forecast Inactive 💰</h3>
