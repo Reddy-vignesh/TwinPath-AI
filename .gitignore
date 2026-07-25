@@ -1,0 +1,31 @@
+# Logs
+*.log
+logs/
+*.sqlite
+
+# Runtime data
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.cache/
+.DS_Store
+
+# Environment / Credentials
+.env
+.env.local
+*.pem
+*.key
+
+# IDEs & OS
+.vscode/
+.idea/
+Thumbs.db
