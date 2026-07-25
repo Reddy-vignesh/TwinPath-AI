@@ -24,13 +24,9 @@ export default function TwinVisualizer() {
 
   const activeRec = recommendations.find(r => r.career_id === selectedCareer);
 
-  // Transform data into radar chart data.
-  // Primary source: feature_contributions from explanation (SHAP values).
-  // Fallback: build radar from skill categories in skill_gap (works for new users).
   const getRadarData = () => {
     if (!activeRec) return [];
 
-    // Primary: use SHAP feature contributions if available
     if (activeRec.explanation?.feature_contributions && Object.keys(activeRec.explanation.feature_contributions).length > 0) {
       return Object.entries(activeRec.explanation.feature_contributions).map(([feature, impact]) => {
         const name = feature.replace('feature_', '').replace(/_/g, ' ');
@@ -43,11 +39,9 @@ export default function TwinVisualizer() {
       }).sort((a, b) => b.A - a.A).slice(0, 6);
     }
 
-    // Fallback: build from skill gap data + overall match score
     const skillGap = activeRec.skill_gap;
     if (skillGap) {
       const matchPct = Math.round((skillGap.match_score ?? 0) * 100);
-      // Aggregate strengths and gaps by skill category
       const categories: Record<string, number> = {};
       (skillGap.strengths ?? []).forEach(s => {
         categories[s] = Math.min(100, (categories[s] ?? 0) + 20);
@@ -63,48 +57,16 @@ export default function TwinVisualizer() {
           .slice(0, 6)
           .map(([name, value]) => ({ subject: name, A: value, fullMark: 100 }));
       }
-      // Last resort: single match score dot
       return [{ subject: 'Overall Match', A: matchPct, fullMark: 100 }];
     }
 
     return [];
   };
 
-
   const radarData = getRadarData();
 
   return (
     <div className="animate-fade-in">
-      <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-        <h2>216D Vector Projection</h2>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          Visualize how your Digital Twin's latent features align with different career profiles.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-lg">
-        {/* Chart Area */}
-        <div className="card" style={{ gridColumn: 'span 2', minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <BrainCircuit color="var(--accent-purple)" />
-              Feature Alignment Radar
-            </h3>
-            
-            <select 
-              className="input-field" 
-              style={{ width: '250px', padding: '0.5rem' }}
-              value={selectedCareer || ''}
-              onChange={(e) => setSelectedCareer(e.target.value)}
-            >
-              {recommendations.map((r: any) => (
-                <option key={r.career_id} value={r.career_id}>
-                  {r.career?.title || 'Unknown'} ({((r.similarity_score || 0) * 100).toFixed(0)}%)
-                </option>
-              ))}
-            </select>
-          </div>
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-xl)' }}>
         <div>
           <h2>AI Vector Analysis</h2>
@@ -131,7 +93,6 @@ export default function TwinVisualizer() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-lg">
-          {/* Left: Radar Chart */}
           <div className="card">
             <h3 style={{ marginBottom: 'var(--spacing-md)' }}>Feature Vector Radar</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 'var(--spacing-lg)' }}>
@@ -151,9 +112,7 @@ export default function TwinVisualizer() {
             </div>
           </div>
 
-          {/* Right: SHAP Feature Attributions & Growth Areas */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-            {/* Top Career Selector */}
             <div className="card">
               <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 'var(--spacing-sm)' }}>
                 Select Career Target to Analyze:
@@ -175,7 +134,6 @@ export default function TwinVisualizer() {
               </select>
             </div>
 
-            {/* Drivers */}
             <div className="card" style={{ flex: 1 }}>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: 'var(--spacing-md)' }}>
                 <Crosshair color="var(--success)" size={20} />
