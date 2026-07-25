@@ -4,17 +4,20 @@ import {
   ResponsiveContainer, Tooltip
 } from 'recharts';
 import { useTwinStore } from '../stores/twinStore';
+import { useProfileStore } from '../stores/profileStore';
 import { ShieldAlert, Crosshair, BrainCircuit } from 'lucide-react';
 
 export default function TwinVisualizer() {
   const { recommendations, fetchRecommendations, isLoadingRecs } = useTwinStore();
+  const { profile, fetchProfile } = useProfileStore();
   const [selectedCareer, setSelectedCareer] = useState<string | null>(null);
 
   useEffect(() => {
+    fetchProfile();
     if (recommendations.length === 0) {
       fetchRecommendations();
     }
-  }, [recommendations.length, fetchRecommendations]);
+  }, [recommendations.length, fetchRecommendations, fetchProfile]);
 
   useEffect(() => {
     if (recommendations.length > 0 && !selectedCareer) {
@@ -80,7 +83,7 @@ export default function TwinVisualizer() {
         <div style={{ color: 'var(--text-muted)', padding: '4rem', textAlign: 'center' }}>
           Loading vector breakdown...
         </div>
-      ) : recommendations.length === 0 || (recommendations.length > 0 && (recommendations[0].similarity_score ?? 0) < 0.1) ? (
+      ) : recommendations.length === 0 || (profile?.total_skills_count ?? 0) === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <BrainCircuit size={48} style={{ color: 'var(--accent-purple)', marginBottom: '1rem' }} />
           <h3 style={{ marginBottom: '0.75rem' }}>Vector Space Inactive ⚡</h3>
