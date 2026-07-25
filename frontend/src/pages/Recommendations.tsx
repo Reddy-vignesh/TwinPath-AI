@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTwinStore, type Recommendation } from '../stores/twinStore';
+import { useProfileStore } from '../stores/profileStore';
 import { Target, TrendingUp, Zap, ChevronDown, ChevronUp, DollarSign, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 
 function confidenceBadge(level: string | undefined) {
@@ -192,11 +193,15 @@ function RecommendationCard({ rec, rank }: { rec: Recommendation; rank: number }
 export default function RecommendationsPage() {
   const navigate = useNavigate();
   const { recommendations, fetchRecommendations, isLoadingRecs } = useTwinStore();
+  const { profile, fetchProfile } = useProfileStore();
 
   useEffect(() => {
+    fetchProfile();
     fetchRecommendations();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const totalSkills = profile?.total_skills_count ?? 0;
 
   return (
     <div className="animate-fade-in">
@@ -224,7 +229,7 @@ export default function RecommendationsPage() {
           <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid rgba(59,130,246,0.3)', borderTopColor: 'var(--accent-blue)', animation: 'spin 0.8s linear infinite' }} />
           Analyzing your Digital Twin in 216-dimensional space…
         </div>
-      ) : recommendations.length === 0 || (recommendations.length > 0 && recommendations[0].similarity_score < 0.1) ? (
+      ) : recommendations.length === 0 || totalSkills === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <Target size={48} style={{ color: 'var(--accent-purple)', marginBottom: '1rem' }} />
           <h3 style={{ marginBottom: '0.75rem' }}>No Profile Data Yet 🎯</h3>
