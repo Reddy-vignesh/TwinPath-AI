@@ -1,0 +1,35 @@
+# ====================================================================
+# Decision Twin AI — Docker Compose (Development Override)
+# ====================================================================
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ====================================================================
+
+services:
+  # ── PostgreSQL (dev settings) ──────────────────────────────────
+  postgres:
+    ports:
+      - "5432:5432"
+
+  # ── FastAPI Backend (dev mode with hot reload) ─────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: decisiontwin-backend-dev
+    environment:
+      APP_ENV: development
+      APP_DEBUG: "true"
+      LOG_LEVEL: DEBUG
+    volumes:
+      # Mount source code for hot reload
+      - ./backend/app:/app/app:ro
+      - ./backend/alembic:/app/alembic:ro
+    command: >
+      python -m uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir /app/app
+      --log-level debug
+    ports:
+      - "8000:8000"
