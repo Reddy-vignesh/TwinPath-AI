@@ -224,15 +224,15 @@ export default function RecommendationsPage() {
           <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid rgba(59,130,246,0.3)', borderTopColor: 'var(--accent-blue)', animation: 'spin 0.8s linear infinite' }} />
           Analyzing your Digital Twin in 216-dimensional space…
         </div>
-      ) : recommendations.length === 0 ? (
+      ) : recommendations.length === 0 || (recommendations.length > 0 && recommendations[0].similarity_score < 0.1) ? (
         <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <Target size={48} style={{ color: 'var(--text-muted)', marginBottom: '1rem' }} />
-          <h3 style={{ marginBottom: '0.75rem' }}>No Recommendations Yet</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--spacing-xl)' }}>
-            Your Twin needs more data to generate meaningful career matches. Add skills, academic history, and career goals in your profile.
+          <Target size={48} style={{ color: 'var(--accent-purple)', marginBottom: '1rem' }} />
+          <h3 style={{ marginBottom: '0.75rem' }}>No Profile Data Yet 🎯</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--spacing-xl)', maxWidth: '500px', margin: '0 auto var(--spacing-xl)' }}>
+            Your Digital Twin needs your profile details to generate accurate career matches. Add your skills, academic major, or target career goals in your profile.
           </p>
           <button className="btn btn-primary" onClick={() => navigate('/profile')}>
-            Update Twin Profile →
+            Set Up Your Profile →
           </button>
         </div>
       ) : (
