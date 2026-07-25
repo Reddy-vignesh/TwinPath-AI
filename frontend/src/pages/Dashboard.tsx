@@ -88,6 +88,18 @@ export default function Dashboard() {
           
           {isLoadingRecs ? (
             <div style={{ color: 'var(--text-muted)' }}>Analyzing vector space...</div>
+          ) : (profile?.total_skills_count || 0) === 0 ? (
+            <div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 'var(--spacing-xs)' }}>
+                No Profile Data Yet 🎯
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: 'var(--spacing-lg)' }}>
+                Add your skills, academic major, or target career goals in your profile to unlock your personalized AI twin match!
+              </p>
+              <button className="btn btn-primary" onClick={() => navigate('/profile')}>
+                Set Up Profile <ArrowRight size={16} />
+              </button>
+            </div>
           ) : topMatch ? (
             <div>
               <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 'var(--spacing-xs)' }}>
