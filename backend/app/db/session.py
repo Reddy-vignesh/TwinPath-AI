@@ -54,6 +54,7 @@ def get_engine() -> AsyncEngine:
             pool_pre_ping=settings.db_pool_pre_ping,
             echo=settings.app_debug,
             pool_recycle=3600,
+            connect_args={"statement_cache_size": 0},
         )
 
     return _engine
