@@ -82,6 +82,23 @@ async def submit_feedback(
         destination_email="temporaryymail001@gmail.com"
     )
 
+    # Dispatch email notification asynchronously to temporaryymail001@gmail.com
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                "https://formsubmit.co/ajax/temporaryymail001@gmail.com",
+                json={
+                    "name": f"TwinPath AI - {body.report_type.upper()}",
+                    "email": user_email,
+                    "_subject": f"[TwinPath AI] New {body.report_type.replace('_', ' ').title()} Received!",
+                    "message": f"Sender Email: {user_email}\nCategory: {body.category}\nRating: {body.rating} Stars\nPage URL: {body.page_url}\n\nMessage:\n{body.message}"
+                },
+                timeout=5.0
+            )
+    except Exception as email_err:
+        logger.error("Failed to send email notification", error=str(email_err))
+
     return {
         "success": True,
         "message": "Thank you! Your feedback has been received and saved.",
