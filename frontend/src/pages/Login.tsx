@@ -118,7 +118,7 @@ export default function Login() {
   };
 
   const handleGoogleSignIn = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
+    onSuccess: async (tokenResponse: any) => {
       setIsLoading(true);
       setError('');
       try {
