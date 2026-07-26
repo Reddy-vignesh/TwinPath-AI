@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfileStore, type SkillCatalogItem } from '../stores/profileStore';
+import { apiClient } from '../api/client';
 import { 
   User, GraduationCap, Target, Wrench, Award, Save, Plus, Trash2, 
   Search, CheckCircle, ChevronDown, ChevronUp, Loader2
@@ -159,6 +160,40 @@ export default function Profile() {
     }
   };
 
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [resumeSuccess, setResumeSuccess] = useState('');
+  const [resumeError, setResumeError] = useState('');
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith('.pdf')) {
+      setResumeError('Please select a valid PDF file.');
+      return;
+    }
+
+    setUploadingResume(true);
+    setResumeError('');
+    setResumeSuccess('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await apiClient.post('/profiles/upload-resume', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setResumeSuccess(res.data?.message || 'Resume parsed successfully!');
+      fetchProfile();
+      fetchSkills();
+    } catch (err: any) {
+      setResumeError(err?.response?.data?.detail || 'Failed to parse PDF resume.');
+    } finally {
+      setUploadingResume(false);
+    }
+  };
+
   const completeness = profile?.twin_completeness_score ?? 0;
 
   return (
@@ -168,7 +203,7 @@ export default function Profile() {
         <div>
           <h2>Twin Profile</h2>
           <p style={{ color: 'var(--text-secondary)' }}>
-            Fill in your details below. More data = better career matches.
+            Fill in your details below or upload your PDF resume to auto-build your Digital Twin.
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
@@ -189,6 +224,49 @@ export default function Profile() {
             {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {isSaving ? 'Saving…' : 'Save All'}
           </button>
+        </div>
+      </div>
+
+      {/* PDF Resume Auto-Parser Hero Dropzone */}
+      <div className="card" style={{
+        marginBottom: 'var(--spacing-xl)',
+        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(59, 130, 246, 0.12))',
+        border: '1px dashed rgba(139, 92, 246, 0.4)',
+        padding: '1.5rem',
+        textAlign: 'center'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ background: 'rgba(139, 92, 246, 0.2)', padding: '0.75rem', borderRadius: '50%', color: 'var(--accent-purple)' }}>
+            <Wrench size={24} />
+          </div>
+          <h3 style={{ margin: 0, fontSize: '1.15rem' }}>⚡ Fast Track: Auto-Build Twin from PDF Resume</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0, maxWidth: '550px' }}>
+            Upload your PDF resume (`.pdf`). Our AI Parser will extract your technical skills, experience, and major automatically!
+          </p>
+
+          <label className="btn btn-secondary" style={{ marginTop: '0.5rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+            {uploadingResume ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            {uploadingResume ? 'Parsing PDF Resume...' : 'Upload PDF Resume'}
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleResumeUpload}
+              disabled={uploadingResume}
+              style={{ display: 'none' }}
+            />
+          </label>
+
+          {resumeSuccess && (
+            <div style={{ color: 'var(--success)', fontSize: '0.85rem', fontWeight: 600, marginTop: '0.5rem' }}>
+              ✓ {resumeSuccess}
+            </div>
+          )}
+
+          {resumeError && (
+            <div style={{ color: 'var(--error)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+              {resumeError}
+            </div>
+          )}
         </div>
       </div>
 
