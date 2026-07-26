@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'https://twinpath-backend.onrender.com/api/v1';
 
 export const apiClient = axios.create({
   baseURL: API_URL,
