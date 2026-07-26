@@ -79,25 +79,7 @@ async def submit_feedback(
         report_id=str(report.id),
         type=body.report_type,
         user_email=user_email,
-        destination_email="temporaryymail001@gmail.com"
     )
-
-    # Dispatch email notification asynchronously to temporaryymail001@gmail.com
-    try:
-        import httpx
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-            await client.post(
-                "https://api.web3forms.com/submit",
-                json={
-                    "access_key": "YOUR_ACCESS_KEY_OR_DIRECT",
-                    "email": "temporaryymail001@gmail.com",
-                    "from_name": f"TwinPath AI ({body.report_type.upper()})",
-                    "subject": f"[TwinPath AI] New {body.report_type.replace('_', ' ').title()} Received!",
-                    "message": f"Sender Email: {user_email}\nCategory: {body.category}\nRating: {body.rating} Stars\nPage URL: {body.page_url}\n\nMessage:\n{body.message}"
-                }
-            )
-    except Exception as email_err:
-        logger.error("Email dispatch failed", error=str(email_err))
 
     return {
         "success": True,
