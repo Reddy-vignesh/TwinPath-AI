@@ -78,13 +78,19 @@ async def google_login(
     # Login or Register User automatically
     try:
         token_response = await auth_service.login(email=email, password=GOOGLE_USER_PASSWORD)
-    except Exception:
-        token_response = await auth_service.register(
-            email=email,
-            password=GOOGLE_USER_PASSWORD,
-            first_name=first_name,
-            last_name=last_name,
-        )
+    except Exception as login_err:
+        logger.info("User not logged in via password, attempting registration", email=email, error=str(login_err))
+        try:
+            token_response = await auth_service.register(
+                email=email,
+                password=GOOGLE_USER_PASSWORD,
+                first_name=first_name,
+                last_name=last_name,
+            )
+        except Exception as reg_err:
+            logger.error("Google OAuth Registration/Login Error", email=email, error=str(reg_err))
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail=f"Google sign in error: {str(reg_err)}")
 
     logger.info("Google OAuth Success", email=email)
 
