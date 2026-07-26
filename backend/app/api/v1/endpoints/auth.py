@@ -73,13 +73,15 @@ async def google_login(
     if not email:
         email = "google.user@gmail.com"
 
+    GOOGLE_USER_PASSWORD = "GoogleOAuthUserSecured123!"
+
     # Login or Register User automatically
     try:
-        token_response = await auth_service.login(email=email, password="GoogleOAuthUserSecured2026!")
+        token_response = await auth_service.login(email=email, password=GOOGLE_USER_PASSWORD)
     except Exception:
         token_response = await auth_service.register(
             email=email,
-            password="GoogleOAuthUserSecured2026!",
+            password=GOOGLE_USER_PASSWORD,
             first_name=first_name,
             last_name=last_name,
         )
