@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { useTwinStore } from '../stores/twinStore';
 import { useProfileStore } from '../stores/profileStore';
-import { ShieldAlert, Crosshair, BrainCircuit } from 'lucide-react';
+import { ShieldAlert, Crosshair, BrainCircuit, Download } from 'lucide-react';
 
 export default function TwinVisualizer() {
   const { recommendations, fetchRecommendations, isLoadingRecs } = useTwinStore();
@@ -26,6 +26,10 @@ export default function TwinVisualizer() {
   }, [recommendations, selectedCareer]);
 
   const activeRec = recommendations.find(r => r.career_id === selectedCareer);
+
+  const handleDownloadReport = () => {
+    window.print();
+  };
 
   const getRadarData = () => {
     if (!activeRec) return [];
@@ -77,6 +81,13 @@ export default function TwinVisualizer() {
             Deconstruct how your Digital Twin maps to target careers in 216-dimensional latent space.
           </p>
         </div>
+        <button
+          className="btn btn-secondary"
+          onClick={handleDownloadReport}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <Download size={16} /> Export Twin PDF Report
+        </button>
       </div>
 
       {isLoadingRecs ? (
