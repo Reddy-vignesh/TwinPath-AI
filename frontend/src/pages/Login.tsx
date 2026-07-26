@@ -150,12 +150,15 @@ export default function Login() {
 
         navigate('/dashboard');
       } catch (err: any) {
-        setError('Google sign in failed. Please try again.');
+        console.error('Google Auth Error:', err);
+        const detailMsg = err?.response?.data?.message || err?.response?.data?.detail || err?.message || '';
+        setError(`Google sign in failed: ${detailMsg || 'Please try again.'}`);
       } finally {
         setIsLoading(false);
       }
     },
-    onError: () => {
+    onError: (errorResponse) => {
+      console.error('Google OAuth Popup Error:', errorResponse);
       setError('Google sign in popup failed or was closed.');
     }
   });
