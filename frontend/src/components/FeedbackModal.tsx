@@ -31,7 +31,6 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     setSuccessMsg('');
 
     try {
-      // 1. Submit to FastAPI backend + Supabase database
       await apiClient.post('/feedback', {
         report_type: reportType,
         category: category,
@@ -40,23 +39,6 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         email: email || undefined,
         page_url: window.location.href,
       });
-
-      // 2. Direct client-side email dispatch to temporaryymail001@gmail.com
-      try {
-        await fetch('https://api.web3forms.com/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            access_key: 'b9d5c4fa-4b82-4217-9154-07085a6fa58a',
-            email: 'temporaryymail001@gmail.com',
-            from_name: `TwinPath AI (${reportType.toUpperCase()})`,
-            subject: `[TwinPath AI] New ${reportType.replace('_', ' ').toUpperCase()} Submitted!`,
-            message: `User Email: ${email || 'Guest User'}\nCategory: ${category}\nRating: ${rating} Stars\nPage URL: ${window.location.href}\n\nMessage:\n${message}`
-          })
-        });
-      } catch {
-        // Fallback silently
-      }
 
       setSuccessMsg('Thank you! Your feedback has been sent directly to the development team.');
       setTimeout(() => {
