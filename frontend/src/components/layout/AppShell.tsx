@@ -15,7 +15,6 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import TopBar from './TopBar';
 import FeedbackModal from '../FeedbackModal';
-import AiMentorWidget from '../AiMentorWidget';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -47,9 +46,6 @@ export default function AppShell({ children }: AppShellProps) {
     <div className="app-layout">
       {/* Feedback Modal */}
       <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
-
-      {/* AI Mentor Counselor Widget */}
-      <AiMentorWidget />
 
       {/* Sidebar */}
       <aside className="sidebar">
