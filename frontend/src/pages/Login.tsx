@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../stores/authStore';
 import { apiClient } from '../api/client';
 import { ShieldCheck, Mail, Sparkles } from 'lucide-react';
@@ -115,6 +116,49 @@ export default function Login() {
       setIsLoading(false);
     }
   };
+
+  const handleGoogleSignIn = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setIsLoading(true);
+      setError('');
+      try {
+        // Fetch user email & name from Google's userinfo API using the access token
+        const googleUserInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+        }).then(res => res.json());
+
+        const googleRes = await apiClient.post('/auth/google', {
+          credential: tokenResponse.access_token,
+          email: googleUserInfo.email,
+          first_name: googleUserInfo.given_name || 'Google',
+          last_name: googleUserInfo.family_name || 'User'
+        });
+
+        const { access_token, refresh_token } = googleRes.data.data;
+        const meResponse = await apiClient.get('/auth/me', {
+          headers: { Authorization: `Bearer ${access_token}` }
+        });
+        const userData = meResponse.data.data;
+
+        setCredentials({
+          id: userData.id,
+          email: userData.email,
+          firstName: userData.first_name ?? googleUserInfo.given_name ?? 'Google',
+          lastName: userData.last_name ?? googleUserInfo.family_name ?? 'User',
+          role: userData.role,
+        }, access_token, refresh_token ?? '');
+
+        navigate('/dashboard');
+      } catch (err: any) {
+        setError('Google sign in failed. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    onError: () => {
+      setError('Google sign in popup failed or was closed.');
+    }
+  });
 
   return (
     <div style={{
@@ -375,7 +419,7 @@ export default function Login() {
                   className="input-field"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="john.doe@testmail.com"
+                  placeholder="student@gmail.com"
                 />
               </div>
 
@@ -419,34 +463,7 @@ export default function Login() {
                 type="button"
                 className="btn btn-secondary"
                 disabled={isLoading}
-                onClick={async () => {
-                  setIsLoading(true);
-                  try {
-                    const googleRes = await apiClient.post('/auth/google', {
-                      credential: 'google_oauth_token_verified',
-                      email: 'google.student@gmail.com',
-                      first_name: 'Google',
-                      last_name: 'Student'
-                    });
-                    const { access_token, refresh_token } = googleRes.data.data;
-                    const meResponse = await apiClient.get('/auth/me', {
-                      headers: { Authorization: `Bearer ${access_token}` }
-                    });
-                    const userData = meResponse.data.data;
-                    setCredentials({
-                      id: userData.id,
-                      email: userData.email,
-                      firstName: userData.first_name ?? 'Google',
-                      lastName: userData.last_name ?? 'Student',
-                      role: userData.role,
-                    }, access_token, refresh_token ?? '');
-                    navigate('/dashboard');
-                  } catch (err: any) {
-                    setError('Google sign in failed.');
-                  } finally {
-                    setIsLoading(false);
-                  }
-                }}
+                onClick={() => handleGoogleSignIn()}
                 style={{
                   padding: '0.75rem',
                   fontWeight: 600,
@@ -455,7 +472,8 @@ export default function Login() {
                   justifyContent: 'center',
                   gap: '0.5rem',
                   backgroundColor: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.15)'
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  cursor: 'pointer'
                 }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24">
