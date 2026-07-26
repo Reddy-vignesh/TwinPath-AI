@@ -49,6 +49,25 @@ class RegisterRequest(BaseModel):
         examples=["Doe"],
     )
 
+    @field_validator("email")
+    @classmethod
+    def validate_official_email(cls, value: str) -> str:
+        """Enforce official and valid email domain verification."""
+        email_str = value.lower().strip()
+        domain = email_str.split("@")[-1] if "@" in email_str else ""
+        
+        # Block known disposable / fake / random test email domains
+        blocked_domains = {
+            "testmail.com", "test.com", "example.com", "tempmail.com",
+            "dispostable.com", "guerrillamail.com", "mailinator.com",
+            "10minutemail.com", "trashmail.com", "fake.com", "yopmail.com"
+        }
+        
+        if domain in blocked_domains:
+            raise ValueError("Invalid email domain. Please use your official or real email address (@gmail.com, .edu, .edu.in, .ac.in, etc.).")
+            
+        return email_str
+
     @field_validator("password")
     @classmethod
     def validate_password_strength(cls, value: str) -> str:
@@ -82,6 +101,20 @@ class SendOTPRequest(BaseModel):
     """Send OTP request schema."""
     email: EmailStr = Field(description="Email to send 6-digit OTP code to")
     purpose: str = Field(default="registration", description="Purpose: registration or password_reset")
+
+    @field_validator("email")
+    @classmethod
+    def validate_official_email(cls, value: str) -> str:
+        email_str = value.lower().strip()
+        domain = email_str.split("@")[-1] if "@" in email_str else ""
+        blocked_domains = {
+            "testmail.com", "test.com", "example.com", "tempmail.com",
+            "dispostable.com", "guerrillamail.com", "mailinator.com",
+            "10minutemail.com", "trashmail.com", "fake.com", "yopmail.com"
+        }
+        if domain in blocked_domains:
+            raise ValueError("Invalid email domain. Please use your official or real email address (@gmail.com, .edu, .edu.in, etc.).")
+        return email_str
 
 
 class VerifyOTPRequest(BaseModel):
