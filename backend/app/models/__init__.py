@@ -13,4 +13,6 @@ from app.models.psychometric import PsychometricAssessment  # noqa: F401
 from app.models.career import Career  # noqa: F401
 from app.models.behavior import BehaviorEvent  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
+from app.models.feedback import FeedbackReport  # noqa: F401
+from app.models.otp import OTPVerification  # noqa: F401
 
