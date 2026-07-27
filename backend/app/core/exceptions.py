@@ -64,6 +64,17 @@ class ForbiddenException(AppException):
         super().__init__(message=message, status_code=403, errors=errors)
 
 
+class BadRequestException(AppException):
+    """Raised when request syntax or validation fails."""
+
+    def __init__(
+        self,
+        message: str = "Bad request.",
+        errors: list[dict[str, Any]] | None = None,
+    ) -> None:
+        super().__init__(message=message, status_code=400, errors=errors)
+
+
 class ValidationException(AppException):
     """Raised when input validation fails beyond Pydantic's defaults."""
 
