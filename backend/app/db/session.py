@@ -16,6 +16,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING
 
+# pyrefly: ignore [missing-import]
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -25,6 +26,7 @@ from sqlalchemy.ext.asyncio import (
 from app.config import get_settings
 
 if TYPE_CHECKING:
+    # pyrefly: ignore [missing-import]
     from sqlalchemy.ext.asyncio import AsyncEngine
 
 # ── Engine & Session Factory ──────────────────────────────────────
@@ -54,6 +56,7 @@ def get_engine() -> AsyncEngine:
             pool_pre_ping=settings.db_pool_pre_ping,
             echo=settings.app_debug,
             pool_recycle=3600,
+            connect_args={"statement_cache_size": 0},
         )
 
     return _engine

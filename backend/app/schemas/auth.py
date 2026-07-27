@@ -49,6 +49,25 @@ class RegisterRequest(BaseModel):
         examples=["Doe"],
     )
 
+    @field_validator("email")
+    @classmethod
+    def validate_official_email(cls, value: str) -> str:
+        """Enforce official and valid email domain verification."""
+        email_str = value.lower().strip()
+        domain = email_str.split("@")[-1] if "@" in email_str else ""
+        
+        # Block known disposable / fake / random test email domains
+        blocked_domains = {
+            "testmail.com", "test.com", "example.com", "tempmail.com",
+            "dispostable.com", "guerrillamail.com", "mailinator.com",
+            "10minutemail.com", "trashmail.com", "fake.com", "yopmail.com"
+        }
+        
+        if domain in blocked_domains:
+            raise ValueError("Invalid email domain. Please use your official or real email address (@gmail.com, .edu, .edu.in, .ac.in, etc.).")
+            
+        return email_str
+
     @field_validator("password")
     @classmethod
     def validate_password_strength(cls, value: str) -> str:
@@ -76,6 +95,44 @@ class RegisterRequest(BaseModel):
             msg = "Name cannot be empty or whitespace only."
             raise ValueError(msg)
         return stripped
+
+
+class SendOTPRequest(BaseModel):
+    """Send OTP request schema."""
+    email: EmailStr = Field(description="Email to send 6-digit OTP code to")
+    purpose: str = Field(default="registration", description="Purpose: registration or password_reset")
+
+    @field_validator("email")
+    @classmethod
+    def validate_official_email(cls, value: str) -> str:
+        email_str = value.lower().strip()
+        domain = email_str.split("@")[-1] if "@" in email_str else ""
+        blocked_domains = {
+            "testmail.com", "test.com", "example.com", "tempmail.com",
+            "dispostable.com", "guerrillamail.com", "mailinator.com",
+            "10minutemail.com", "trashmail.com", "fake.com", "yopmail.com"
+        }
+        if domain in blocked_domains:
+            raise ValueError("Invalid email domain. Please use your official or real email address (@gmail.com, .edu, .edu.in, etc.).")
+        return email_str
+
+
+class VerifyOTPRequest(BaseModel):
+    """Verify OTP request schema."""
+    email: EmailStr = Field(description="User email")
+    otp_code: str = Field(min_length=6, max_length=6, description="6-digit verification code")
+    purpose: str = Field(default="registration", description="Purpose: registration or password_reset")
+
+
+class ResetPasswordRequest(BaseModel):
+    """Reset password request schema."""
+    email: EmailStr = Field(description="User email")
+    otp_code: str = Field(min_length=6, max_length=6, description="Verified 6-digit OTP code")
+    new_password: str = Field(
+        min_length=PASSWORD_MIN_LENGTH,
+        max_length=PASSWORD_MAX_LENGTH,
+        description="New password",
+    )
 
 
 class LoginRequest(BaseModel):

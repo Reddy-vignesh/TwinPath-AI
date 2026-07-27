@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -8,11 +8,13 @@ import {
   Lightbulb, 
   LineChart,
   BrainCircuit,
+  MessageSquarePlus,
   LogOut
 } from 'lucide-react';
 
 import { useAuthStore } from '../../stores/authStore';
 import TopBar from './TopBar';
+import FeedbackModal from '../FeedbackModal';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -33,6 +35,7 @@ export default function AppShell({ children }: AppShellProps) {
   const { logout, user } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -41,6 +44,9 @@ export default function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="app-layout">
+      {/* Feedback Modal */}
+      <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
+
       {/* Sidebar */}
       <aside className="sidebar">
         <div style={{ padding: 'var(--spacing-md) 0', marginBottom: 'var(--spacing-xl)' }}>
@@ -76,6 +82,21 @@ export default function AppShell({ children }: AppShellProps) {
         </nav>
 
         <div style={{ marginTop: 'auto', paddingTop: 'var(--spacing-lg)', borderTop: 'var(--glass-border)' }}>
+          <button 
+            className="btn"
+            style={{ 
+              width: '100%', 
+              marginBottom: 'var(--spacing-md)',
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(59, 130, 246, 0.15))',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              color: '#fff'
+            }}
+            onClick={() => setIsFeedbackOpen(true)}
+          >
+            <MessageSquarePlus size={18} color="var(--accent-purple)" />
+            Feedback & Support
+          </button>
+
           <div style={{ marginBottom: 'var(--spacing-md)' }}>
             <div style={{ fontWeight: 600 }}>{user?.firstName} {user?.lastName}</div>
             <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{user?.email}</div>

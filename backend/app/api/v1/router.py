@@ -24,6 +24,8 @@ from app.api.v1.endpoints.twin_data import (
     certifications_router,
     projects_router,
 )
+from app.api.v1.endpoints.feedback import router as feedback_router
+from app.api.v1.endpoints.resume import router as resume_router
 
 # ── Aggregate Router ──────────────────────────────────────────────
 
@@ -51,3 +53,5 @@ v1_router.include_router(simulations_router)
 # Phase 5 routers — Admin & Analytics
 v1_router.include_router(admin_router)
 v1_router.include_router(analytics_router)
+v1_router.include_router(feedback_router)
+v1_router.include_router(resume_router)
