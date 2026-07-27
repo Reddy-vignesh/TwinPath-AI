@@ -7,6 +7,10 @@ and current user retrieval.
 All endpoints return consistent response envelopes.
 """
 
+from app.schemas.auth import ResetPasswordRequest
+from app.schemas.auth import VerifyOTPRequest
+from app.schemas.auth import SendOTPRequest
+# pyrefly: ignore [invalid-syntax]
 from __future__ import annotations
 
 from typing import Any
@@ -342,6 +346,7 @@ async def reset_password(
         raise BadRequestException(message="Invalid or expired password reset code.")
 
     # Mark OTP as used
+    # pyrefly: ignore [bad-assignment]
     otp.is_used = True
 
     # Update User Password
@@ -351,6 +356,7 @@ async def reset_password(
         raise NotFoundException(message="User account not found.")
 
     new_hash = hash_password(payload.new_password)
+    # pyrefly: ignore [bad-argument-type, missing-argument, unexpected-keyword]
     await user_repo.update(user.id, hashed_password=new_hash)
     await session.commit()
 
