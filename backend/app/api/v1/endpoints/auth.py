@@ -225,48 +225,59 @@ async def get_me(
     )
 
 
+def hash_otp(otp: str) -> str:
+    """Hashes the OTP so it isn't stored in plaintext in the database."""
+    import hashlib
+    return hashlib.sha256(otp.encode()).hexdigest()
+
+
 @router.post("/send-otp", summary="Send 6-digit OTP code to email", status_code=200)
 async def send_otp(
     payload: SendOTPRequest = Body(...),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    """Generate and store 6-digit OTP for email verification or password reset."""
-    import random
+    """Generate, hash, and store a 6-digit OTP code."""
+    import secrets
     from app.models.otp import OTPVerification
-    from sqlalchemy import select, update
+    from sqlalchemy import update
     from app.core.exceptions import BadRequestException
 
     try:
-        # Invalidate previous unused OTPs for this email/purpose
+        # 1. Invalidate ONLY previous unused OTPs for this email/purpose
         await session.execute(
             update(OTPVerification)
-            .where(OTPVerification.email == payload.email, OTPVerification.purpose == payload.purpose)
+            .where(
+                OTPVerification.email == payload.email,
+                OTPVerification.purpose == payload.purpose,
+                OTPVerification.is_used == False,
+            )
             .values(is_used=True)
         )
 
-        # Generate 6-digit code
-        otp_code = f"{random.randint(100000, 999999)}"
+        # 2. Cryptographically secure 6-digit random code
+        otp_code = f"{secrets.randbelow(900000) + 100000}"
 
+        # 3. Hash the code before storing (Security Best Practice)
+        hashed_otp = hash_otp(otp_code)
+
+        # 4. Create database record
         otp = OTPVerification(
             email=payload.email,
-            otp_code=otp_code,
+            otp_code=hashed_otp,  # Store hash, not plaintext
             purpose=payload.purpose,
         )
         session.add(otp)
         await session.commit()
 
-        logger.info(
-            "OTP Generated",
-            email=payload.email,
-            purpose=payload.purpose,
-            otp=otp_code,
-        )
+        logger.info("OTP Generated", email=payload.email, purpose=payload.purpose)
 
+        # 5. Build response payload (Include demo_otp for instant verification)
         return success_response(
             data={"email": payload.email, "purpose": payload.purpose, "demo_otp": otp_code},
             message=f"6-digit verification code sent to {payload.email} (Demo OTP: {otp_code}).",
         )
     except Exception as e:
+        await session.rollback()
         logger.error("Error in send_otp", error=str(e), email=payload.email)
         raise BadRequestException(message=f"Failed to generate verification code: {str(e)}")
 
@@ -276,15 +287,18 @@ async def verify_otp(
     payload: VerifyOTPRequest = Body(...),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    """Verify if the 6-digit OTP code is valid and active."""
+    """Verify if the 6-digit OTP code matches stored hash and is active."""
     from app.models.otp import OTPVerification
     from sqlalchemy import select
     from app.core.exceptions import BadRequestException
 
+    # Hash incoming OTP to compare against stored hash
+    incoming_hash = hash_otp(payload.otp_code)
+
     result = await session.execute(
         select(OTPVerification).where(
             OTPVerification.email == payload.email,
-            OTPVerification.otp_code == payload.otp_code,
+            OTPVerification.otp_code == incoming_hash,
             OTPVerification.purpose == payload.purpose,
             OTPVerification.is_used == False,
         ).order_by(OTPVerification.created_at.desc())
@@ -309,14 +323,15 @@ async def reset_password(
     from app.models.otp import OTPVerification
     from app.repositories.user_repository import UserRepository
     from app.core.security import hash_password
-    from sqlalchemy import select, update
+    from sqlalchemy import select
     from app.core.exceptions import BadRequestException, NotFoundException
 
-    # Check OTP
+    incoming_hash = hash_otp(payload.otp_code)
+
     result = await session.execute(
         select(OTPVerification).where(
             OTPVerification.email == payload.email,
-            OTPVerification.otp_code == payload.otp_code,
+            OTPVerification.otp_code == incoming_hash,
             OTPVerification.purpose == "password_reset",
             OTPVerification.is_used == False,
         ).order_by(OTPVerification.created_at.desc())
