@@ -234,36 +234,41 @@ async def send_otp(
     import random
     from app.models.otp import OTPVerification
     from sqlalchemy import select, update
+    from app.core.exceptions import BadRequestException
 
-    # Invalidate previous unused OTPs for this email/purpose
-    await session.execute(
-        update(OTPVerification)
-        .where(OTPVerification.email == payload.email, OTPVerification.purpose == payload.purpose)
-        .values(is_used=True)
-    )
+    try:
+        # Invalidate previous unused OTPs for this email/purpose
+        await session.execute(
+            update(OTPVerification)
+            .where(OTPVerification.email == payload.email, OTPVerification.purpose == payload.purpose)
+            .values(is_used=True)
+        )
 
-    # Generate 6-digit code
-    otp_code = f"{random.randint(100000, 999999)}"
+        # Generate 6-digit code
+        otp_code = f"{random.randint(100000, 999999)}"
 
-    otp = OTPVerification(
-        email=payload.email,
-        otp_code=otp_code,
-        purpose=payload.purpose,
-    )
-    session.add(otp)
-    await session.commit()
+        otp = OTPVerification(
+            email=payload.email,
+            otp_code=otp_code,
+            purpose=payload.purpose,
+        )
+        session.add(otp)
+        await session.commit()
 
-    logger.info(
-        "OTP Generated",
-        email=payload.email,
-        purpose=payload.purpose,
-        otp=otp_code,
-    )
+        logger.info(
+            "OTP Generated",
+            email=payload.email,
+            purpose=payload.purpose,
+            otp=otp_code,
+        )
 
-    return success_response(
-        data={"email": payload.email, "purpose": payload.purpose, "demo_otp": otp_code},
-        message=f"6-digit verification code sent to {payload.email} (Demo OTP: {otp_code}).",
-    )
+        return success_response(
+            data={"email": payload.email, "purpose": payload.purpose, "demo_otp": otp_code},
+            message=f"6-digit verification code sent to {payload.email} (Demo OTP: {otp_code}).",
+        )
+    except Exception as e:
+        logger.error("Error in send_otp", error=str(e), email=payload.email)
+        raise BadRequestException(message=f"Failed to generate verification code: {str(e)}")
 
 
 @router.post("/verify-otp", summary="Verify 6-digit OTP code", status_code=200)
