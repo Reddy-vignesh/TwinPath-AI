@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Decision Twin AI — Authentication Endpoints.
 
@@ -7,11 +9,7 @@ and current user retrieval.
 All endpoints return consistent response envelopes.
 """
 
-from app.schemas.auth import ResetPasswordRequest
-from app.schemas.auth import VerifyOTPRequest
-from app.schemas.auth import SendOTPRequest
-# pyrefly: ignore [invalid-syntax]
-from __future__ import annotations
+from app.schemas.auth import ResetPasswordRequest, VerifyOTPRequest, SendOTPRequest
 
 from typing import Any
 
