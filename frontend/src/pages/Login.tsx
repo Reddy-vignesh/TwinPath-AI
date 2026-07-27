@@ -25,7 +25,8 @@ export default function Login() {
 
   // Send OTP handler
   const handleSendOTP = async (purpose: 'registration' | 'password_reset') => {
-    if (!email || !email.includes('@')) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
       setError('Please enter a valid email address.');
       return;
     }
@@ -43,7 +44,11 @@ export default function Login() {
         setViewState('forgot_password');
       }
     } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Failed to send verification code.');
+      const errorMsg = 
+        err?.response?.data?.message || 
+        err?.response?.data?.detail || 
+        'Failed to send verification code. Please try again.';
+      setError(errorMsg);
     } finally {
       setIsLoading(false);
     }
