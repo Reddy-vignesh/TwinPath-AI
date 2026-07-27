@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
@@ -227,7 +227,7 @@ async def get_me(
 
 @router.post("/send-otp", summary="Send 6-digit OTP code to email", status_code=200)
 async def send_otp(
-    payload: SendOTPRequest,
+    payload: SendOTPRequest = Body(...),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Generate and store 6-digit OTP for email verification or password reset."""
@@ -258,7 +258,6 @@ async def send_otp(
         email=payload.email,
         purpose=payload.purpose,
         otp=otp_code,
-        destination="temporaryymail001@gmail.com"
     )
 
     return success_response(
@@ -269,7 +268,7 @@ async def send_otp(
 
 @router.post("/verify-otp", summary="Verify 6-digit OTP code", status_code=200)
 async def verify_otp(
-    payload: VerifyOTPRequest,
+    payload: VerifyOTPRequest = Body(...),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Verify if the 6-digit OTP code is valid and active."""
@@ -298,7 +297,7 @@ async def verify_otp(
 
 @router.post("/reset-password", summary="Reset password using verified OTP", status_code=200)
 async def reset_password(
-    payload: ResetPasswordRequest,
+    payload: ResetPasswordRequest = Body(...),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Reset user password after OTP verification."""
