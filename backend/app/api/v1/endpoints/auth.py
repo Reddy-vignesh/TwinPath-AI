@@ -14,7 +14,7 @@ from app.schemas.auth import ResetPasswordRequest, VerifyOTPRequest, SendOTPRequ
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
@@ -233,16 +233,61 @@ def hash_otp(otp: str) -> str:
     return hashlib.sha256(otp.encode()).hexdigest()
 
 
+def send_smtp_email(email_to: str, otp_code: str, purpose: str) -> None:
+    """Sends OTP code to the recipient email address via SMTP."""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    from app.config import get_settings
+
+    settings = get_settings()
+
+    # If SMTP username or password is not set, log warning and skip
+    if not settings.smtp_user or not settings.smtp_password:
+        logger.warning(
+            "SMTP email bypass (credentials not set)",
+            email_to=email_to,
+            code=otp_code
+        )
+        return
+
+    sender_email = settings.smtp_from_email or settings.smtp_user
+    subject = "TwinPath AI - Your Verification Code"
+    
+    # Body content based on purpose
+    if purpose == "password_reset":
+        body_text = f"Hello,\n\nYou requested a password reset. Your 6-digit code is: {otp_code}\n\nThis code expires in 10 minutes.\n\nBest regards,\nTwinPath AI Team"
+    else:
+        body_text = f"Welcome to TwinPath AI!\n\nYour 6-digit email verification code is: {otp_code}\n\nThis code expires in 10 minutes.\n\nBest regards,\nTwinPath AI Team"
+
+    msg = MIMEMultipart()
+    msg["From"] = sender_email
+    msg["To"] = email_to
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body_text, "plain"))
+
+    try:
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+            server.starttls()
+            server.login(settings.smtp_user, settings.smtp_password)
+            server.sendmail(sender_email, email_to, msg.as_string())
+        logger.info("SMTP Email sent successfully", email=email_to)
+    except Exception as e:
+        logger.error("Failed to send SMTP email", error=str(e), email=email_to)
+
+
 @router.post("/send-otp", summary="Send 6-digit OTP code to email", status_code=200)
 async def send_otp(
     payload: SendOTPRequest = Body(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    """Generate, hash, and store a 6-digit OTP code."""
+    """Generate, hash, and store a 6-digit OTP code, then dispatch email."""
     import secrets
     from app.models.otp import OTPVerification
     from sqlalchemy import update
     from app.core.exceptions import BadRequestException
+    from app.config import get_settings
 
     try:
         # 1. Invalidate ONLY previous unused OTPs for this email/purpose
@@ -273,10 +318,21 @@ async def send_otp(
 
         logger.info("OTP Generated", email=payload.email, purpose=payload.purpose)
 
-        # 5. Build response payload (Include demo_otp for instant verification)
+        # 5. Dispatch email as a background task
+        background_tasks.add_task(send_smtp_email, payload.email, otp_code, payload.purpose)
+
+        # 6. Build response payload (Include demo_otp ONLY if SMTP credentials are not set)
+        settings = get_settings()
+        response_data = {"email": payload.email, "purpose": payload.purpose}
+        success_message = f"Verification code sent to {payload.email}."
+
+        if not settings.smtp_user or not settings.smtp_password:
+            response_data["demo_otp"] = otp_code
+            success_message += f" (Demo OTP: {otp_code})"
+
         return success_response(
-            data={"email": payload.email, "purpose": payload.purpose, "demo_otp": otp_code},
-            message=f"6-digit verification code sent to {payload.email} (Demo OTP: {otp_code}).",
+            data=response_data,
+            message=success_message,
         )
     except Exception as e:
         await session.rollback()
