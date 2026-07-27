@@ -19,7 +19,7 @@ class OTPVerification(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "otp_verifications"
 
     email = Column(String(255), nullable=False, index=True)
-    otp_code = Column(String(6), nullable=False)
+    otp_code = Column(String(255), nullable=False)
     purpose = Column(String(50), nullable=False, default="registration")  # registration, password_reset
     is_used = Column(Boolean, default=False, nullable=False)
     expires_at = Column(DateTime(timezone=True), default=default_otp_expiry, nullable=False)
