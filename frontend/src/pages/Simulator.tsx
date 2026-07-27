@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { apiClient } from '../api/client';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
@@ -35,7 +36,6 @@ export default function Simulator() {
     // 2. Get salary prediction — use simulated careers first, fall back to general predictions
     setIsSalaryLoading(true);
     try {
-      const { apiClient } = await import('../api/client');
       const topCareers = result.simulated?.top_careers ?? [];
       const careerIds = topCareers
         .slice(0, 3)
