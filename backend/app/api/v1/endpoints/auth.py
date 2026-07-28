@@ -290,8 +290,8 @@ def send_smtp_email(email_to: str, otp_code: str, purpose: str) -> None:
 
 @router.post("/send-otp", summary="Send 6-digit OTP code to email", status_code=200)
 async def send_otp(
-    payload: SendOTPRequest = Body(...),
     background_tasks: BackgroundTasks,
+    payload: SendOTPRequest = Body(...),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Generate, hash, and store a 6-digit OTP code, then dispatch email."""

@@ -2,6 +2,7 @@ import os
 import base64
 import json
 import urllib.request
+import time
 
 TOKEN = input("Enter GitHub Personal Access Token: ").strip()
 REPO = "Reddy-vignesh/TwinPath-AI"
@@ -39,30 +40,63 @@ headers = {
     "Content-Type": "application/json"
 }
 
-for rel_path, abs_path in files_to_push:
+
+def push_file(rel_path, abs_path, retries=3):
     with open(abs_path, 'rb') as f:
         content = base64.b64encode(f.read()).decode('utf-8')
-    
-    url = f"https://api.github.com/repos/{REPO}/contents/{rel_path}"
-    
-    sha = None
-    try:
-        req_get = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req_get) as resp:
-            sha = json.loads(resp.read())["sha"]
-    except Exception:
-        pass
 
-    payload = {
-        "message": f"Enable real Google OAuth Pop-up & Database-only feedback: {rel_path}",
-        "content": content
-    }
+    url = f"https://api.github.com/repos/{REPO}/contents/{rel_path}"
+
+    # Get current file SHA (required for updates)
+    sha = None
+    for attempt in range(retries):
+        try:
+            req_get = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req_get, timeout=30) as resp:
+                sha = json.loads(resp.read())["sha"]
+            break
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                break  # New file - no SHA needed
+            time.sleep(2)
+        except Exception:
+            time.sleep(2)
+
+    payload = {"message": f"Fix auth bugs: {rel_path}", "content": content}
     if sha:
         payload["sha"] = sha
 
     data = json.dumps(payload).encode('utf-8')
-    req_put = urllib.request.Request(url, data=data, headers=headers, method="PUT")
-    with urllib.request.urlopen(req_put) as resp:
-        print(f"✅ SUCCESS: Pushed {rel_path} to GitHub!")
 
-print("\n🎉 REAL GOOGLE OAUTH POPUP PUSHED TO GITHUB!")
+    for attempt in range(retries):
+        try:
+            req_put = urllib.request.Request(url, data=data, headers=headers, method="PUT")
+            with urllib.request.urlopen(req_put, timeout=30) as resp:
+                print(f"SUCCESS: Pushed {rel_path} to GitHub!")
+                return True
+        except urllib.error.HTTPError as e:
+            body = e.read().decode('utf-8')
+            print(f"  Attempt {attempt+1} failed ({e.code}): {body[:150]}")
+            time.sleep(3)
+        except Exception as e:
+            print(f"  Attempt {attempt+1} connection error: {e}, retrying...")
+            time.sleep(3)
+
+    print(f"FAILED after {retries} attempts: {rel_path}")
+    return False
+
+
+success_count = 0
+fail_count = 0
+
+for rel_path, abs_path in files_to_push:
+    result = push_file(rel_path, abs_path)
+    if result:
+        success_count += 1
+    else:
+        fail_count += 1
+    time.sleep(0.5)
+
+print(f"\nPushed {success_count} files. Failed: {fail_count}.")
+if fail_count == 0:
+    print("ALL FILES PUSHED TO GITHUB SUCCESSFULLY!")

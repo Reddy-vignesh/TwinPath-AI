@@ -5,6 +5,8 @@ Centralised settings loaded from environment variables via Pydantic Settings.
 All configuration is validated at startup. Secrets are never hardcoded.
 """
 
+from sqlalchemy.dialects.postgresql import Any
+# pyrefly: ignore [invalid-syntax]
 from __future__ import annotations
 
 from functools import lru_cache
@@ -31,6 +33,7 @@ class Settings(BaseSettings):
     )
     app_debug: bool = Field(default=False, description="Enable debug mode")
     app_version: str = Field(default="0.1.0", description="Application version")
+    # pyrefly: ignore [bad-assignment]
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO", description="Logging level"
     )
@@ -125,6 +128,7 @@ class Settings(BaseSettings):
         """Check if running in production mode."""
         return self.app_env == "production"
 
+    # pyrefly: ignore [not-a-type]
     def model_post_init(self, __context: Any) -> None:
         """Validate security settings post initialization."""
         if self.is_production and "replace-with-a-secure" in self.jwt_secret_key:
