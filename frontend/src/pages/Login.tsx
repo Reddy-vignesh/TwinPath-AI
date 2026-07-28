@@ -50,7 +50,14 @@ export default function Login() {
     try {
       const res = await apiClient.post('/auth/send-otp', { email, purpose });
       const demoOtp = res.data?.data?.demo_otp;
-      setSuccessInfo(`6-digit code sent to ${email}! ${demoOtp ? `(Demo Code: ${demoOtp})` : ''}`);
+      const emailError = res.data?.data?.email_error;
+
+      if (emailError) {
+        setError(`OTP created but email failed to send: ${emailError}`);
+        return;
+      }
+
+      setSuccessInfo(`6-digit code sent to ${email}! Check your inbox (and spam folder). ${demoOtp ? `(Demo Code: ${demoOtp})` : ''}`);
       if (purpose === 'registration') {
         setViewState('otp_verify');
       } else {
