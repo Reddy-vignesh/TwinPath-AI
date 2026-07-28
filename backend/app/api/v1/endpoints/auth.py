@@ -291,7 +291,7 @@ def send_smtp_email(email_to: str, otp_code: str, purpose: str) -> None:
 @router.post("/send-otp", summary="Send 6-digit OTP code to email", status_code=200)
 async def send_otp(
     payload: SendOTPRequest = Body(...),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Generate, hash, and store a 6-digit OTP code, then dispatch email."""
@@ -377,6 +377,10 @@ async def verify_otp(
 
     if not otp or not otp.is_valid():
         raise BadRequestException(message="Invalid or expired verification code.")
+
+    # Mark OTP as used to prevent replay attacks
+    otp.is_used = True  # type: ignore[assignment]
+    await session.commit()
 
     return success_response(
         data={"verified": True},
