@@ -267,10 +267,22 @@ def send_smtp_email(email_to: str, otp_code: str, purpose: str) -> None:
     msg.attach(MIMEText(body_text, "plain"))
 
     try:
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
-            server.starttls()
-            server.login(settings.smtp_user, settings.smtp_password)
-            server.sendmail(sender_email, email_to, msg.as_string())
+        # Try SSL port 465 or port 587 with automatic fallback for cloud platforms
+        if settings.smtp_port == 465:
+            with smtplib.SMTP_SSL(settings.smtp_host, 465, timeout=15) as server:
+                server.login(settings.smtp_user, settings.smtp_password)
+                server.sendmail(sender_email, email_to, msg.as_string())
+        else:
+            try:
+                with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as server:
+                    server.starttls()
+                    server.login(settings.smtp_user, settings.smtp_password)
+                    server.sendmail(sender_email, email_to, msg.as_string())
+            except Exception:
+                # Fallback to SSL 465 if 587 is blocked on cloud server
+                with smtplib.SMTP_SSL(settings.smtp_host, 465, timeout=15) as server:
+                    server.login(settings.smtp_user, settings.smtp_password)
+                    server.sendmail(sender_email, email_to, msg.as_string())
         logger.info("SMTP Email sent successfully", email=email_to)
     except Exception as e:
         logger.error("Failed to send SMTP email", error=str(e), email=email_to)
