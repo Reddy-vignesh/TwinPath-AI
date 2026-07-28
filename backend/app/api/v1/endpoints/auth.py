@@ -14,7 +14,7 @@ from app.schemas.auth import ResetPasswordRequest, VerifyOTPRequest, SendOTPRequ
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Body, Depends, BackgroundTasks
+from fastapi import APIRouter, Body, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
@@ -290,11 +290,10 @@ def send_smtp_email(email_to: str, otp_code: str, purpose: str) -> None:
 
 @router.post("/send-otp", summary="Send 6-digit OTP code to email", status_code=200)
 async def send_otp(
-    background_tasks: BackgroundTasks,
     payload: SendOTPRequest = Body(...),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    """Generate, hash, and store a 6-digit OTP code, then dispatch email."""
+    """Generate, hash, and store a 6-digit OTP code, then send email."""
     import secrets
     from app.models.otp import OTPVerification
     from sqlalchemy import update
@@ -302,7 +301,7 @@ async def send_otp(
     from app.config import get_settings
 
     try:
-        # 1. Invalidate ONLY previous unused OTPs for this email/purpose
+        # 1. Invalidate previous unused OTPs for this email/purpose
         await session.execute(
             update(OTPVerification)
             .where(
@@ -316,13 +315,13 @@ async def send_otp(
         # 2. Cryptographically secure 6-digit random code
         otp_code = f"{secrets.randbelow(900000) + 100000}"
 
-        # 3. Hash the code before storing (Security Best Practice)
+        # 3. Hash the code before storing
         hashed_otp = hash_otp(otp_code)
 
         # 4. Create database record
         otp = OTPVerification(
             email=payload.email,
-            otp_code=hashed_otp,  # Store hash, not plaintext
+            otp_code=hashed_otp,
             purpose=payload.purpose,
         )
         session.add(otp)
@@ -330,17 +329,31 @@ async def send_otp(
 
         logger.info("OTP Generated", email=payload.email, purpose=payload.purpose)
 
-        # 5. Dispatch email as a background task
-        background_tasks.add_task(send_smtp_email, payload.email, otp_code, payload.purpose)
-
-        # 6. Build response payload (Include demo_otp ONLY if SMTP credentials are not set)
+        # 5. Send email SYNCHRONOUSLY (not as background task)
+        #    This ensures errors propagate back to the user
         settings = get_settings()
-        response_data = {"email": payload.email, "purpose": payload.purpose}
+        email_error = None
+
+        if settings.smtp_user and settings.smtp_password:
+            try:
+                send_smtp_email(payload.email, otp_code, payload.purpose)
+            except Exception as smtp_err:
+                email_error = str(smtp_err)
+                logger.error("SMTP send failed", error=email_error, email=payload.email)
+        else:
+            logger.warning("SMTP credentials not configured", email=payload.email)
+
+        # 6. Build response
+        response_data: dict[str, Any] = {"email": payload.email, "purpose": payload.purpose}
         success_message = f"Verification code sent to {payload.email}."
 
         if not settings.smtp_user or not settings.smtp_password:
             response_data["demo_otp"] = otp_code
             success_message += f" (Demo OTP: {otp_code})"
+
+        if email_error:
+            response_data["email_error"] = email_error
+            success_message = f"OTP generated but email delivery failed: {email_error}"
 
         return success_response(
             data=response_data,
