@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Decision Twin AI — Application Configuration.
 
@@ -5,10 +7,7 @@ Centralised settings loaded from environment variables via Pydantic Settings.
 All configuration is validated at startup. Secrets are never hardcoded.
 """
 
-from sqlalchemy.dialects.postgresql import Any
-# pyrefly: ignore [invalid-syntax]
-from __future__ import annotations
-
+from typing import Any
 from functools import lru_cache
 from typing import Literal
 
