@@ -91,12 +91,13 @@ class Settings(BaseSettings):
     uvicorn_port: int = Field(default=8000, ge=1, le=65535, description="Uvicorn bind port")
     uvicorn_workers: int = Field(default=1, ge=1, le=32, description="Uvicorn worker count")
 
-    # ── SMTP Mail Dispatcher ───────────────────────────────────────
+    # ── Mail Dispatcher ───────────────────────────────────────
     smtp_host: str = Field(default="smtp.gmail.com", description="SMTP server host")
     smtp_port: int = Field(default=465, ge=1, le=65535, description="SMTP server port")
     smtp_user: str | None = Field(default=None, description="SMTP username / email")
     smtp_password: str | None = Field(default=None, description="SMTP app password")
     smtp_from_email: str | None = Field(default=None, description="Sender email address")
+    brevo_api_key: str | None = Field(default=None, description="Brevo API Key for HTTP email sending")
 
     @computed_field  # type: ignore[prop-decorator]
     @property
