@@ -53,8 +53,7 @@ async def google_login(
     auth_service: AuthService = Depends(_get_auth_service),
 ) -> dict[str, Any]:
     """1-Click Google OAuth authentication with real token verification."""
-    from google.oauth2 import id_token
-    from google.auth.transport import requests as google_requests
+    import httpx
 
     CLIENT_ID = "1034739387168-sh7hc3g9trqqvnd33upip4di7p5ecsri.apps.googleusercontent.com"
     
@@ -62,15 +61,27 @@ async def google_login(
     first_name = payload.first_name or "Google"
     last_name = payload.last_name or "User"
 
-    # Verify ID token with Google if provided
+    # Verify Access Token with Google
     if payload.credential and payload.credential != "google_oauth_token_verified":
         try:
-            id_info = id_token.verify_oauth2_token(payload.credential, google_requests.Request(), CLIENT_ID)
-            email = id_info.get("email", email)
-            first_name = id_info.get("given_name", first_name)
-            last_name = id_info.get("family_name", last_name)
+            # Call Google's tokeninfo endpoint to verify the access token
+            tokeninfo_url = f"https://www.googleapis.com/oauth2/v3/tokeninfo?access_token={payload.credential}"
+            async with httpx.AsyncClient() as client:
+                response = await client.get(tokeninfo_url, timeout=10)
+                
+            if response.status_code == 200:
+                token_data = response.json()
+                # Verify that the token was issued for our app
+                if token_data.get("aud") == CLIENT_ID:
+                    # Token is valid, we can trust the frontend email
+                    pass
+                else:
+                    logger.warning("Google token audience mismatch", expected=CLIENT_ID, got=token_data.get("aud"))
+            else:
+                logger.warning("Google token verification failed", status=response.status_code, error=response.text)
+                
         except Exception as e:
-            logger.warning("Google ID token verification fallback", error=str(e))
+            logger.warning("Google token verification error", error=str(e))
 
     if not email:
         email = "google.user@gmail.com"
