@@ -286,6 +286,7 @@ def send_smtp_email(email_to: str, otp_code: str, purpose: str) -> None:
         logger.info("SMTP Email sent successfully", email=email_to)
     except Exception as e:
         logger.error("Failed to send SMTP email", error=str(e), email=email_to)
+        raise e
 
 
 @router.post("/send-otp", summary="Send 6-digit OTP code to email", status_code=200)
