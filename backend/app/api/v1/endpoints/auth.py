@@ -233,32 +233,57 @@ def hash_otp(otp: str) -> str:
     return hashlib.sha256(otp.encode()).hexdigest()
 
 
-def send_smtp_email(email_to: str, otp_code: str, purpose: str) -> None:
-    """Sends OTP code to the recipient email address via SMTP."""
+def send_email(email_to: str, otp_code: str, purpose: str) -> None:
+    """Sends OTP code to the recipient email address via Brevo API or SMTP."""
     import smtplib
     from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
     from app.config import get_settings
+    import httpx
 
     settings = get_settings()
 
-    # If SMTP username or password is not set, log warning and skip
-    if not settings.smtp_user or not settings.smtp_password:
-        logger.warning(
-            "SMTP email bypass (credentials not set)",
-            email_to=email_to,
-            code=otp_code
-        )
-        return
-
-    sender_email = settings.smtp_from_email or settings.smtp_user
+    sender_email = settings.smtp_from_email or settings.smtp_user or "noreply@twinpath.com"
     subject = "TwinPath AI - Your Verification Code"
     
-    # Body content based on purpose
     if purpose == "password_reset":
         body_text = f"Hello,\n\nYou requested a password reset. Your 6-digit code is: {otp_code}\n\nThis code expires in 10 minutes.\n\nBest regards,\nTwinPath AI Team"
     else:
         body_text = f"Welcome to TwinPath AI!\n\nYour 6-digit email verification code is: {otp_code}\n\nThis code expires in 10 minutes.\n\nBest regards,\nTwinPath AI Team"
+
+    # 1. Try Brevo API first (Bypasses SMTP port blocking)
+    if settings.brevo_api_key:
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "accept": "application/json",
+            "api-key": settings.brevo_api_key,
+            "content-type": "application/json"
+        }
+        payload = {
+            "sender": {"name": "TwinPath AI", "email": sender_email},
+            "to": [{"email": email_to}],
+            "subject": subject,
+            "textContent": body_text
+        }
+        
+        try:
+            with httpx.Client() as client:
+                response = client.post(url, headers=headers, json=payload, timeout=15)
+                response.raise_for_status()
+            logger.info("Brevo API Email sent successfully", email=email_to)
+            return
+        except Exception as e:
+            logger.error("Failed to send email via Brevo API", error=str(e), email=email_to)
+            raise Exception(f"Brevo API error: {str(e)}")
+
+    # 2. Fallback to SMTP if no Brevo API key is provided
+    if not settings.smtp_user or not settings.smtp_password:
+        logger.warning(
+            "Email bypass (no Brevo API key or SMTP credentials)",
+            email_to=email_to,
+            code=otp_code
+        )
+        return
 
     msg = MIMEMultipart()
     msg["From"] = sender_email
@@ -267,7 +292,6 @@ def send_smtp_email(email_to: str, otp_code: str, purpose: str) -> None:
     msg.attach(MIMEText(body_text, "plain"))
 
     try:
-        # Try SSL port 465 or port 587 with automatic fallback for cloud platforms
         if settings.smtp_port == 465:
             with smtplib.SMTP_SSL(settings.smtp_host, 465, timeout=15) as server:
                 server.login(settings.smtp_user, settings.smtp_password)
@@ -279,7 +303,6 @@ def send_smtp_email(email_to: str, otp_code: str, purpose: str) -> None:
                     server.login(settings.smtp_user, settings.smtp_password)
                     server.sendmail(sender_email, email_to, msg.as_string())
             except Exception:
-                # Fallback to SSL 465 if 587 is blocked on cloud server
                 with smtplib.SMTP_SSL(settings.smtp_host, 465, timeout=15) as server:
                     server.login(settings.smtp_user, settings.smtp_password)
                     server.sendmail(sender_email, email_to, msg.as_string())
@@ -335,20 +358,22 @@ async def send_otp(
         settings = get_settings()
         email_error = None
 
-        if settings.smtp_user and settings.smtp_password:
+        has_email_config = bool(settings.brevo_api_key or (settings.smtp_user and settings.smtp_password))
+
+        if has_email_config:
             try:
-                send_smtp_email(payload.email, otp_code, payload.purpose)
-            except Exception as smtp_err:
-                email_error = str(smtp_err)
-                logger.error("SMTP send failed", error=email_error, email=payload.email)
+                send_email(payload.email, otp_code, payload.purpose)
+            except Exception as email_err:
+                email_error = str(email_err)
+                logger.error("Email send failed", error=email_error, email=payload.email)
         else:
-            logger.warning("SMTP credentials not configured", email=payload.email)
+            logger.warning("Email credentials not configured", email=payload.email)
 
         # 6. Build response
         response_data: dict[str, Any] = {"email": payload.email, "purpose": payload.purpose}
         success_message = f"Verification code sent to {payload.email}."
 
-        if not settings.smtp_user or not settings.smtp_password:
+        if not has_email_config:
             response_data["demo_otp"] = otp_code
             success_message += f" (Demo OTP: {otp_code})"
 
