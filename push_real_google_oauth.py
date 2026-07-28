@@ -13,6 +13,7 @@ files_to_push = [
     ("backend/app/models/__init__.py", os.path.join(ROOT, r"backend\app\models\__init__.py")),
     ("backend/app/core/exceptions.py", os.path.join(ROOT, r"backend\app\core\exceptions.py")),
     ("backend/app/config.py", os.path.join(ROOT, r"backend\app\config.py")),
+    ("backend/app/db/session.py", os.path.join(ROOT, r"backend\app\db\session.py")),
     ("backend/app/schemas/auth.py", os.path.join(ROOT, r"backend\app\schemas\auth.py")),
     ("backend/app/schemas/google_auth.py", os.path.join(ROOT, r"backend\app\schemas\google_auth.py")),
     ("backend/app/api/v1/endpoints/auth.py", os.path.join(ROOT, r"backend\app\api\v1\endpoints\auth.py")),
