@@ -30,6 +30,19 @@ export default function Login() {
       setError('Please enter a valid email address.');
       return;
     }
+
+    // For registration, ensure name and password are filled before sending OTP
+    if (purpose === 'registration') {
+      if (!firstName.trim() || !lastName.trim()) {
+        setError('Please enter your first name and last name before sending the code.');
+        return;
+      }
+      if (password.length < 8) {
+        setError('Please set a password (min 8 characters) before sending the code.');
+        return;
+      }
+    }
+
     setIsLoading(true);
     setError('');
     setSuccessInfo('');
