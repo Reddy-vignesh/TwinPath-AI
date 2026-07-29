@@ -27,6 +27,47 @@ from app.schemas.google_auth import GoogleLoginRequest
 from app.schemas.user import UserRead
 from app.services.auth_service import AuthService
 
+# ── OTP-Specific Rate Limiter ─────────────────────────────────────
+# Prevents brute-force of 6-digit OTP codes (1M combinations)
+# Separate from the global rate limiter: per-email not per-IP
+import time as _time
+from collections import defaultdict as _defaultdict
+
+_otp_send_log: dict[str, list[float]] = _defaultdict(list)    # email -> timestamps
+_otp_verify_log: dict[str, list[float]] = _defaultdict(list)  # email -> timestamps
+_OTP_SEND_MAX = 3       # max 3 OTP sends
+_OTP_SEND_WINDOW = 300  # per 5 minutes
+_OTP_VERIFY_MAX = 5     # max 5 verify attempts
+_OTP_VERIFY_WINDOW = 600 # per 10 minutes
+
+
+def _otp_send_allowed(email: str) -> bool:
+    """Check if OTP send is allowed for this email address."""
+    now = _time.time()
+    window_start = now - _OTP_SEND_WINDOW
+    _otp_send_log[email] = [t for t in _otp_send_log[email] if t > window_start]
+    if len(_otp_send_log[email]) >= _OTP_SEND_MAX:
+        return False
+    _otp_send_log[email].append(now)
+    return True
+
+
+def _otp_verify_allowed(email: str) -> bool:
+    """Check if OTP verify attempt is allowed for this email address."""
+    now = _time.time()
+    window_start = now - _OTP_VERIFY_WINDOW
+    _otp_verify_log[email] = [t for t in _otp_verify_log[email] if t > window_start]
+    if len(_otp_verify_log[email]) >= _OTP_VERIFY_MAX:
+        return False
+    _otp_verify_log[email].append(now)
+    return True
+
+
+def _otp_verify_reset(email: str) -> None:
+    """Clear the verify counter on success to prevent lockout."""
+    _otp_verify_log[email] = []
+
+
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -335,6 +376,12 @@ async def send_otp(
     from app.core.exceptions import BadRequestException
     from app.config import get_settings
 
+    # Dedicated OTP send rate limit: max 3 per 5 minutes per email
+    if not _otp_send_allowed(payload.email):
+        raise BadRequestException(
+            message="Too many verification code requests. Please wait 5 minutes before trying again."
+        )
+
     try:
         # 1. Invalidate previous unused OTPs for this email/purpose
         await session.execute(
@@ -385,8 +432,13 @@ async def send_otp(
         success_message = f"Verification code sent to {payload.email}."
 
         if not has_email_config:
-            response_data["demo_otp"] = otp_code
-            success_message += f" (Demo OTP: {otp_code})"
+            # Dev-only: log the OTP server-side for testing purposes
+            # NEVER return plaintext OTP in response body (may be logged by proxies)
+            logger.warning(
+                "OTP generated (no email config) — dev use only",
+                email=payload.email,
+                otp_for_dev_testing=otp_code,
+            )
 
         if email_error:
             response_data["email_error"] = email_error
@@ -412,6 +464,12 @@ async def verify_otp(
     from sqlalchemy import select
     from app.core.exceptions import BadRequestException
 
+    # Dedicated OTP verify rate limit: max 5 attempts per 10 minutes per email
+    if not _otp_verify_allowed(payload.email):
+        raise BadRequestException(
+            message="Too many verification attempts. Please request a new code and wait 10 minutes."
+        )
+
     # Hash incoming OTP to compare against stored hash
     incoming_hash = hash_otp(payload.otp_code)
 
@@ -425,12 +483,17 @@ async def verify_otp(
     )
     otp = result.scalars().first()
 
+    # Generic error message — do NOT distinguish between "wrong code"
+    # and "code not found". Both reveal info that aids user enumeration.
     if not otp or not otp.is_valid():
         raise BadRequestException(message="Invalid or expired verification code.")
 
     # Mark OTP as used to prevent replay attacks
     otp.is_used = True  # type: ignore[assignment]
     await session.commit()
+
+    # Clear the verify rate-limit counter on success
+    _otp_verify_reset(payload.email)
 
     return success_response(
         data={"verified": True},
