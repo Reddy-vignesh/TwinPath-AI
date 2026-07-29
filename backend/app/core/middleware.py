@@ -51,7 +51,15 @@ def register_middleware(app: FastAPI, settings: Settings) -> None:
         allow_origins=settings.cors_origin_list,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
+        # Explicit allowlist — never use ["*"] as it enables header injection
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "X-Correlation-ID",
+            "X-Requested-With",
+            "Accept",
+            "Origin",
+        ],
         expose_headers=["X-Correlation-ID", "X-Process-Time"],
     )
 
@@ -64,6 +72,24 @@ def register_middleware(app: FastAPI, settings: Settings) -> None:
         response = await call_next(request)
         elapsed_ms = (time.perf_counter() - start) * 1000
         response.headers["X-Process-Time"] = f"{elapsed_ms:.2f}ms"
+        return response
+
+    # ── Security Response Headers ──────────────────────────────
+    @app.middleware("http")
+    async def security_headers_middleware(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        response.headers["Cache-Control"] = "no-store"
+        # HSTS — only set in production (not over HTTP in dev)
+        if request.url.scheme == "https":
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=63072000; includeSubDomains; preload"
+            )
         return response
 
     # ── Correlation ID ─────────────────────────────────────────
@@ -92,12 +118,10 @@ def register_middleware(app: FastAPI, settings: Settings) -> None:
         if request.url.path.startswith("/api/v1/health"):
             return await call_next(request)
 
-        # Get real client IP if behind reverse proxy (Nginx / Cloudflare / AWS)
-        forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            client_ip = forwarded_for.split(",")[0].strip()
-        else:
-            client_ip = request.client.host if request.client else "unknown"
+        # Use request.client.host directly — do NOT trust X-Forwarded-For
+        # from the raw request as it is trivially spoofable by any client.
+        # On Render/cloud, the trusted proxy IP is in client.host already.
+        client_ip = request.client.host if request.client else "unknown"
 
         if not rate_limiter.is_allowed(client_ip):
             return JSONResponse(
