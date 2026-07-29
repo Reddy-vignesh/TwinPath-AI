@@ -10,6 +10,7 @@ All endpoints return consistent response envelopes.
 """
 
 from app.schemas.auth import ResetPasswordRequest, VerifyOTPRequest, SendOTPRequest
+from app.core.disposable_email import is_disposable_email
 
 from typing import Any
 
@@ -168,6 +169,13 @@ async def register(
     auth_service: AuthService = Depends(_get_auth_service),
 ) -> dict[str, Any]:
     """Register a new user and return an access/refresh token pair."""
+    # Block disposable/temporary email addresses
+    if is_disposable_email(payload.email):
+        from app.core.exceptions import BadRequestException
+        raise BadRequestException(
+            message="Temporary or disposable email addresses are not allowed. "
+                    "Please use a permanent email address (e.g. Gmail, Outlook, or your institution email)."
+        )
     token_response = await auth_service.register(
         email=payload.email,
         password=payload.password,
@@ -375,6 +383,13 @@ async def send_otp(
     from sqlalchemy import update
     from app.core.exceptions import BadRequestException
     from app.config import get_settings
+
+    # Block disposable/temporary email addresses before doing any work
+    if is_disposable_email(payload.email):
+        raise BadRequestException(
+            message="Temporary or disposable email addresses are not allowed. "
+                    "Please use a permanent email address (e.g. Gmail, Outlook, or your institution email)."
+        )
 
     # Dedicated OTP send rate limit: max 3 per 5 minutes per email
     if not _otp_send_allowed(payload.email):
