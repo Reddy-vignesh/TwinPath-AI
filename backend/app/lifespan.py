@@ -18,6 +18,7 @@ from fastapi import FastAPI
 
 from app.config import get_settings
 from app.core.logging_config import configure_logging
+from app.core.disposable_email import load_blocklist
 from app.db.session import dispose_engine, get_engine
 
 logger = structlog.get_logger(__name__)
@@ -66,6 +67,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # app.state.career_ranker = load_career_ranker()
     # app.state.faiss_index = load_faiss_index()
     # app.state.salary_predictor = load_salary_predictor()
+
+    # Load disposable email blocklist into memory
+    load_blocklist()
 
     logger.info("Application startup complete")
 
