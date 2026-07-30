@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../stores/authStore';
 import { apiClient } from '../api/client';
-import { ShieldCheck, Mail, Sparkles, User, Lock, ArrowRight, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { ShieldCheck, Sparkles, ArrowRight, CheckCircle2, AlertCircle, X } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
