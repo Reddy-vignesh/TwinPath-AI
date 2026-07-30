@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../stores/authStore';
 import { apiClient } from '../api/client';
-import { ShieldCheck, Sparkles, ArrowRight, CheckCircle2, AlertCircle, X, Mail, Lock, User, AtSign } from 'lucide-react';
+import { X } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,14 +11,13 @@ export default function Login() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [otpCode, setOtpCode] = useState('');
 
-  // Active panel toggle: false = Login view, true = Register view
+  // Panel toggle state: false = Login, true = Register
   const [isRegistering, setIsRegistering] = useState(false);
 
-  // Overlay modal states: null | 'otp_verify' | 'forgot_password' | 'guest'
+  // Overlay modal state: null | 'otp_verify' | 'forgot_password' | 'guest'
   const [activeModal, setActiveModal] = useState<null | 'otp_verify' | 'forgot_password' | 'guest'>(null);
 
   const [guestName, setGuestName] = useState('');
@@ -35,8 +34,8 @@ export default function Login() {
     }
 
     if (purpose === 'registration') {
-      if (!firstName.trim() || !lastName.trim()) {
-        setError('Please enter your first name and last name before requesting the verification code.');
+      if (!fullName.trim()) {
+        setError('Please enter your full name.');
         return;
       }
       if (password.length < 8) {
@@ -76,7 +75,7 @@ export default function Login() {
     }
   };
 
-  // Main Auth Submit for Login / Register / OTP / Reset / Guest
+  // Main Auth Submit
   const handleSubmit = async (e: React.FormEvent, mode: 'login' | 'register_init' | 'otp_verify' | 'forgot_password' | 'guest') => {
     e.preventDefault();
     setIsLoading(true);
@@ -93,7 +92,7 @@ export default function Login() {
 
       if (mode === 'guest') {
         if (!guestName.trim()) {
-          setError('Please enter your display name to continue as guest.');
+          setError('Please enter your name for guest demo access.');
           setIsLoading(false);
           return;
         }
@@ -106,11 +105,15 @@ export default function Login() {
           purpose: 'registration'
         });
 
+        const nameParts = fullName.trim().split(' ');
+        const first_name = nameParts[0] || 'User';
+        const last_name = nameParts.slice(1).join(' ') || 'User';
+
         const regResponse = await apiClient.post('/auth/register', {
           email,
           password,
-          first_name: firstName,
-          last_name: lastName
+          first_name,
+          last_name
         });
         tokenData = regResponse.data.data;
       } else if (mode === 'forgot_password') {
@@ -197,74 +200,45 @@ export default function Login() {
   });
 
   return (
-    <div className="auth-wrapper">
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', width: '100vw' }}>
       <div className={`animated-auth-container ${isRegistering ? 'active' : ''}`}>
         <div className="curved-shaped"></div>
         <div className="curved-shaped2"></div>
 
         {/* ── LOGIN FORM PANEL ───────────────────────────────────────────── */}
         <div className="form-box Login">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 12px rgba(6, 182, 212, 0.4)'
-            }}>
-              <ShieldCheck size={18} color="#fff" />
-            </div>
-            <span style={{ fontSize: '1.1rem', fontWeight: '700', fontFamily: 'var(--font-display)', color: '#fff' }}>
-              TwinPath <span className="text-gradient">AI</span>
-            </span>
-          </div>
-
-          <h2 style={{ fontSize: '24px', color: '#fff' }}>Login</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '12px' }}>
-            Enter your credentials to access your account.
-          </p>
+          <h2 className="animation" style={{ '--D': 0, '--S': 21 } as React.CSSProperties}>Login</h2>
 
           {error && !activeModal && (
             <div style={{
-              padding: '8px 12px',
+              padding: '6px 10px',
               borderRadius: '6px',
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
+              background: 'rgba(239, 68, 68, 0.2)',
+              border: '1px solid rgba(239, 68, 68, 0.5)',
               color: '#fca5a5',
               fontSize: '11px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              marginBottom: '10px'
+              marginTop: '10px'
             }}>
-              <AlertCircle size={14} />
-              <span>{error}</span>
+              {error}
             </div>
           )}
 
           {successInfo && !activeModal && (
             <div style={{
-              padding: '8px 12px',
+              padding: '6px 10px',
               borderRadius: '6px',
-              background: 'rgba(16, 185, 129, 0.15)',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
+              background: 'rgba(16, 185, 129, 0.2)',
+              border: '1px solid rgba(16, 185, 129, 0.5)',
               color: '#6ee7b7',
               fontSize: '11px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              marginBottom: '10px'
+              marginTop: '10px'
             }}>
-              <CheckCircle2 size={14} />
-              <span>{successInfo}</span>
+              {successInfo}
             </div>
           )}
 
           <form onSubmit={(e) => handleSubmit(e, 'login')}>
-            <div className="animated-input-box">
+            <div className="input-box animation" style={{ '--D': 1, '--S': 22 } as React.CSSProperties}>
               <input
                 type="email"
                 required
@@ -272,10 +246,10 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
               />
               <label>Email Address</label>
-              <Mail size={16} className="input-icon" />
+              <i className="bx bx-at"></i>
             </div>
 
-            <div className="animated-input-box">
+            <div className="input-box animation" style={{ '--D': 2, '--S': 23 } as React.CSSProperties}>
               <input
                 type="password"
                 required
@@ -283,10 +257,38 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
               />
               <label>Password</label>
-              <Lock size={16} className="input-icon" />
+              <i className="bx bx-lock"></i>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+            <div className="input-box animation" style={{ '--D': 3, '--S': 24 } as React.CSSProperties}>
+              <button className="btn" type="submit" disabled={isLoading}>
+                {isLoading ? 'Signing in...' : 'Login'}
+              </button>
+            </div>
+
+            <div className="auth-aux-options animation" style={{ '--D': 3, '--S': 24 } as React.CSSProperties}>
+              <button
+                type="button"
+                onClick={() => handleGoogleSignIn()}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                Google
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setError('');
+                  setActiveModal('guest');
+                }}
+              >
+                Guest Demo
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -294,202 +296,131 @@ export default function Login() {
                   setSuccessInfo('');
                   handleSendOTP('password_reset');
                 }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent-cyan)',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  fontWeight: '500'
-                }}
               >
                 Forgot Password?
               </button>
             </div>
 
-            <button
-              type="submit"
-              className="auth-btn-primary"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Authenticating...' : 'Sign In'}
-              <ArrowRight size={16} />
-            </button>
+            <div className="regi-link animation" style={{ '--D': 4, '--S': 25 } as React.CSSProperties}>
+              <p>
+                Don't have an account?{' '}
+                <a
+                  href="#"
+                  className="SignUpLink"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setError('');
+                    setSuccessInfo('');
+                    setIsRegistering(true);
+                  }}
+                >
+                  signup
+                </a>
+              </p>
+            </div>
           </form>
-
-          {/* Social & Guest Buttons */}
-          <button
-            type="button"
-            onClick={() => handleGoogleSignIn()}
-            className="auth-btn-google"
-            disabled={isLoading}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-            </svg>
-            Continue with Google
-          </button>
-
-          <div style={{ textAlign: 'center', marginTop: '10px' }}>
-            <button
-              type="button"
-              onClick={() => {
-                setError('');
-                setActiveModal('guest');
-              }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-secondary)',
-                fontSize: '12px',
-                cursor: 'pointer'
-              }}
-            >
-              ⚡ Explore as Guest (Quick Demo)
-            </button>
-          </div>
-
-          <div style={{ textAlign: 'center', marginTop: '12px' }}>
-            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-              Don't have an account?{' '}
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setError('');
-                  setSuccessInfo('');
-                  setIsRegistering(true);
-                }}
-                style={{ color: 'var(--accent-cyan)', fontWeight: '600', textDecoration: 'none' }}
-              >
-                Register Now
-              </a>
-            </p>
-          </div>
         </div>
 
         {/* ── LOGIN SIDE INFO CONTENT ────────────────────────────────────── */}
         <div className="info-content Login">
-          <h2>Welcome Back !</h2>
-          <p>
-            Enter your credentials to access your account and explore your digital career twin trajectory.
+          <h2 className="animation" style={{ '--D': 0, '--S': 20 } as React.CSSProperties}>
+            Welcome Back !
+          </h2>
+          <p className="animation" style={{ '--D': 1, '--S': 21 } as React.CSSProperties}>
+            Enter your credentials to access your account.
           </p>
         </div>
 
         {/* ── REGISTER FORM PANEL ────────────────────────────────────────── */}
         <div className="form-box Register">
-          <h2 style={{ fontSize: '24px', color: '#fff' }}>Register</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>
-            Join us today and unlock access to your personalized dashboard.
-          </p>
+          <h2 className="animation" style={{ '--li': 17, '--S': 0 } as React.CSSProperties}>Register</h2>
 
           {error && !activeModal && (
             <div style={{
-              padding: '8px 12px',
+              padding: '6px 10px',
               borderRadius: '6px',
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
+              background: 'rgba(239, 68, 68, 0.2)',
+              border: '1px solid rgba(239, 68, 68, 0.5)',
               color: '#fca5a5',
               fontSize: '11px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              marginBottom: '8px'
+              marginTop: '10px'
             }}>
-              <AlertCircle size={14} />
-              <span>{error}</span>
+              {error}
             </div>
           )}
 
           <form onSubmit={(e) => handleSubmit(e, 'register_init')}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div className="animated-input-box" style={{ marginTop: '10px' }}>
-                <input
-                  type="text"
-                  required
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                />
-                <label>First Name</label>
-                <User size={16} className="input-icon" />
-              </div>
-
-              <div className="animated-input-box" style={{ marginTop: '10px' }}>
-                <input
-                  type="text"
-                  required
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                />
-                <label>Last Name</label>
-                <User size={16} className="input-icon" />
-              </div>
+            <div className="input-box animation" style={{ '--li': 18, '--S': 1 } as React.CSSProperties}>
+              <input
+                type="text"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+              <label>Full Name</label>
+              <i className="bx bx-user"></i>
             </div>
 
-            <div className="animated-input-box" style={{ marginTop: '14px' }}>
+            <div className="input-box animation" style={{ '--li': 18, '--S': 1 } as React.CSSProperties}>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
-              <label>Official Email Address</label>
-              <AtSign size={16} className="input-icon" />
+              <label>Official Email</label>
+              <i className="bx bx-at"></i>
             </div>
 
-            <div className="animated-input-box" style={{ marginTop: '14px' }}>
+            <div className="input-box animation" style={{ '--li': 19, '--S': 2 } as React.CSSProperties}>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              <label>Password (min 8 chars)</label>
-              <Lock size={16} className="input-icon" />
+              <label>Password</label>
+              <i className="bx bx-lock"></i>
             </div>
 
-            <button
-              type="submit"
-              className="auth-btn-primary"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Sending Code...' : 'Get Verification Code'}
-              <Sparkles size={16} />
-            </button>
-          </form>
+            <div className="input-box animation" style={{ '--li': 20, '--S': 3 } as React.CSSProperties}>
+              <button className="btn" type="submit" disabled={isLoading}>
+                {isLoading ? 'Sending Code...' : 'Register'}
+              </button>
+            </div>
 
-          <div style={{ textAlign: 'center', marginTop: '14px' }}>
-            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-              Have an account?{' '}
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setError('');
-                  setSuccessInfo('');
-                  setIsRegistering(false);
-                }}
-                style={{ color: 'var(--accent-cyan)', fontWeight: '600', textDecoration: 'none' }}
-              >
-                Sign In
-              </a>
-            </p>
-          </div>
+            <div className="regi-link animation" style={{ '--li': 21, '--S': 4 } as React.CSSProperties}>
+              <p>
+                Have an account?{' '}
+                <a
+                  href="#"
+                  className="SignInLink"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setError('');
+                    setSuccessInfo('');
+                    setIsRegistering(false);
+                  }}
+                >
+                  Sign In
+                </a>
+              </p>
+            </div>
+          </form>
         </div>
 
         {/* ── REGISTER SIDE INFO CONTENT ─────────────────────────────────── */}
         <div className="info-content Register">
-          <h2>Welcome</h2>
-          <p>
-            Join us today and unlock access to your personalized dashboard and career twin.
+          <h2 className="animation" style={{ '--li': 17, '--S': 0 } as React.CSSProperties}>
+            Welcome
+          </h2>
+          <p className="animation" style={{ '--li': 18, '--S': 1 } as React.CSSProperties}>
+            Join us today and unlock access to your personalized dashboard.
           </p>
         </div>
       </div>
 
-      {/* ── OVERLAY MODALS (OTP Verification / Password Reset / Guest) ─────── */}
+      {/* ── OVERLAY MODALS (OTP / Reset / Guest) ───────────────────────────── */}
       {activeModal && (
         <div style={{
           position: 'fixed',
@@ -502,17 +433,16 @@ export default function Login() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 100,
-          padding: '1rem'
+          zIndex: 100
         }}>
           <div style={{
             background: '#111827',
-            border: '2px solid var(--accent-cyan)',
-            borderRadius: '20px',
+            border: '2px solid #06b6d4',
+            borderRadius: '16px',
             padding: '2rem',
-            width: '420px',
-            maxWidth: '100%',
-            boxShadow: '0 0 40px rgba(6, 182, 212, 0.4)',
+            width: '400px',
+            maxWidth: '90%',
+            boxShadow: '0 0 30px rgba(6, 182, 212, 0.4)',
             position: 'relative'
           }}>
             <button
@@ -523,7 +453,7 @@ export default function Login() {
                 right: '16px',
                 background: 'none',
                 border: 'none',
-                color: 'var(--text-muted)',
+                color: '#94a3b8',
                 cursor: 'pointer'
               }}
             >
@@ -532,127 +462,113 @@ export default function Login() {
 
             {error && (
               <div style={{
-                padding: '10px 14px',
-                borderRadius: '8px',
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid rgba(239, 68, 68, 0.4)',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid rgba(239, 68, 68, 0.5)',
                 color: '#fca5a5',
                 fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
                 marginBottom: '1rem'
               }}>
-                <AlertCircle size={16} />
-                <span>{error}</span>
+                {error}
               </div>
             )}
 
             {successInfo && (
               <div style={{
-                padding: '10px 14px',
-                borderRadius: '8px',
-                background: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                background: 'rgba(16, 185, 129, 0.2)',
+                border: '1px solid rgba(16, 185, 129, 0.5)',
                 color: '#6ee7b7',
                 fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
                 marginBottom: '1rem'
               }}>
-                <CheckCircle2 size={16} />
-                <span>{successInfo}</span>
+                {successInfo}
               </div>
             )}
 
-            {/* OTP VERIFY MODAL */}
+            {/* OTP VERIFY */}
             {activeModal === 'otp_verify' && (
               <form onSubmit={(e) => handleSubmit(e, 'otp_verify')}>
-                <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#fff' }}>
-                  Verify Your Email
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+                <h3 style={{ fontSize: '18px', marginBottom: '8px', textAlign: 'center' }}>Verify Email</h3>
+                <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '20px', textAlign: 'center' }}>
                   Enter the 6-digit code sent to <strong>{email}</strong>
                 </p>
 
-                <div className="animated-input-box" style={{ marginTop: '0', marginBottom: '1.5rem' }}>
+                <div className="input-box" style={{ marginTop: '0', marginBottom: '20px' }}>
                   <input
                     type="text"
                     required
                     maxLength={6}
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value.trim())}
-                    style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '20px', fontWeight: '700' }}
+                    style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '20px' }}
                   />
-                  <label style={{ left: '50%', transform: 'translate(-50%, -50%)' }}>6-Digit OTP Code</label>
+                  <label style={{ left: '50%', transform: 'translate(-50%, -50%)' }}>6-Digit OTP</label>
                 </div>
 
-                <button type="submit" className="auth-btn-primary" style={{ width: '100%' }} disabled={isLoading}>
+                <button type="submit" className="btn" style={{ width: '100%' }} disabled={isLoading}>
                   {isLoading ? 'Verifying...' : 'Complete Registration'}
                 </button>
               </form>
             )}
 
-            {/* FORGOT PASSWORD MODAL */}
+            {/* FORGOT PASSWORD */}
             {activeModal === 'forgot_password' && (
               <form onSubmit={(e) => handleSubmit(e, 'forgot_password')}>
-                <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#fff' }}>
-                  Reset Your Password
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-                  Enter the code sent to <strong>{email}</strong> and your new password.
+                <h3 style={{ fontSize: '18px', marginBottom: '8px', textAlign: 'center' }}>Reset Password</h3>
+                <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '16px', textAlign: 'center' }}>
+                  Enter code sent to <strong>{email}</strong> and your new password.
                 </p>
 
-                <div className="animated-input-box" style={{ marginTop: '0', marginBottom: '1rem' }}>
+                <div className="input-box" style={{ marginTop: '0', marginBottom: '16px' }}>
                   <input
                     type="text"
                     required
                     maxLength={6}
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value.trim())}
-                    style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '18px', fontWeight: '700' }}
+                    style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '18px' }}
                   />
-                  <label style={{ left: '50%', transform: 'translate(-50%, -50%)' }}>6-Digit OTP Code</label>
+                  <label style={{ left: '50%', transform: 'translate(-50%, -50%)' }}>OTP Code</label>
                 </div>
 
-                <div className="animated-input-box" style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
+                <div className="input-box" style={{ marginTop: '16px', marginBottom: '20px' }}>
                   <input
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
-                  <label>New Password (min 8 chars)</label>
+                  <label>New Password</label>
                 </div>
 
-                <button type="submit" className="auth-btn-primary" style={{ width: '100%' }} disabled={isLoading}>
-                  {isLoading ? 'Resetting Password...' : 'Reset & Log In'}
+                <button type="submit" className="btn" style={{ width: '100%' }} disabled={isLoading}>
+                  {isLoading ? 'Resetting...' : 'Reset & Login'}
                 </button>
               </form>
             )}
 
-            {/* GUEST LOGIN MODAL */}
+            {/* GUEST DEMO */}
             {activeModal === 'guest' && (
               <form onSubmit={(e) => handleSubmit(e, 'guest')}>
-                <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#fff' }}>
-                  Guest Demo Access
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-                  Try the career twin simulator immediately with a temporary guest profile.
+                <h3 style={{ fontSize: '18px', marginBottom: '8px', textAlign: 'center' }}>Guest Demo Access</h3>
+                <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '20px', textAlign: 'center' }}>
+                  Try the career twin simulator immediately with a temporary profile.
                 </p>
 
-                <div className="animated-input-box" style={{ marginTop: '0', marginBottom: '1.5rem' }}>
+                <div className="input-box" style={{ marginTop: '0', marginBottom: '20px' }}>
                   <input
                     type="text"
                     required
                     value={guestName}
                     onChange={(e) => setGuestName(e.target.value)}
                   />
-                  <label>Your Display Name</label>
+                  <label>Display Name</label>
                 </div>
 
-                <button type="submit" className="auth-btn-primary" style={{ width: '100%' }} disabled={isLoading}>
+                <button type="submit" className="btn" style={{ width: '100%' }} disabled={isLoading}>
                   {isLoading ? 'Creating Demo...' : 'Enter Dashboard'}
                 </button>
               </form>
