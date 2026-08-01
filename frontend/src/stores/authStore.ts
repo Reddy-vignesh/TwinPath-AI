@@ -19,7 +19,7 @@ interface AuthState {
   error: string | null;
 
   // Actions
-  setCredentials: (user: User, accessToken: string, refreshToken: string) => void;
+  setCredentials: (user: User | null, accessToken: string, refreshToken: string) => void;
   logout: () => void;
   refresh: () => Promise<void>;
   fetchUser: () => Promise<void>;
