@@ -150,7 +150,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const demoEmail = `guest_${Date.now()}@demo.twinpath.ai`;
+      const demoEmail = `guest_${Date.now()}@gmail.com`;
       const demoPassword = 'DemoPassword123!';
       const names = (username || 'Guest Evaluator').trim().split(' ');
       const first_name = names[0] || 'Guest';
@@ -289,12 +289,12 @@ export default function Login() {
       {activeModal === 'guest' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(9, 13, 22, 0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div className="card" style={{ width: '400px', border: '1px solid var(--accent-purple)', textAlign: 'center' }}>
-            <h3 style={{ color: 'var(--accent-purple)', marginBottom: '1rem' }}>Enter Guest Mode</h3>
+            <h3 style={{ color: 'var(--accent-purple)', marginBottom: '1rem' }}>Explore TwinPath AI (Guest Mode)</h3>
             <form onSubmit={handleGuestSubmit}>
-              <input type="text" required style={{ width: '100%', padding: '1rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--accent-purple)', color: 'white', borderRadius: '8px', outline: 'none', marginBottom: '1.5rem' }} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Your Name (e.g. John Doe)" />
+              <input type="text" required style={{ width: '100%', padding: '1rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--accent-purple)', color: 'white', borderRadius: '8px', outline: 'none', marginBottom: '1.5rem' }} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Your Name (e.g. Alex Morgan)" />
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setActiveModal('none')}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1, background: 'var(--accent-purple)', color: 'white' }} disabled={isLoading}>{isLoading ? 'Entering...' : 'Enter App'}</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, background: 'var(--accent-purple)', color: 'white' }} disabled={isLoading}>{isLoading ? 'Launching Demo...' : 'Start Guest Demo'}</button>
               </div>
             </form>
           </div>
