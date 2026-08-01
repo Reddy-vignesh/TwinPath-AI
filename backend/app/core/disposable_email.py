@@ -100,6 +100,12 @@ _ALLOWED_DOMAINS: frozenset[str] = frozenset({
     "sify.com",
     "indiatimes.com",
 
+    # ── TwinPath Internal & Demo ───────────────────────────────────────────
+    "twinpath.ai",
+    "demo.twinpath.ai",
+    "guest.twinpath.ai",
+    "twinpath.com",
+
     # ── Other well-known providers ─────────────────────────────────────────
     "fastmail.com",
     "fastmail.fm",
