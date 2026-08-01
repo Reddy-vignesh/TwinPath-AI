@@ -97,9 +97,13 @@ export default function AppShell({ children }: AppShellProps) {
             Feedback & Support
           </button>
 
-          <div style={{ marginBottom: 'var(--spacing-md)' }}>
-            <div style={{ fontWeight: 600 }}>{user?.firstName} {user?.lastName}</div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{user?.email}</div>
+          <div style={{ marginBottom: 'var(--spacing-md)', padding: '0.25rem 0.5rem' }}>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'User Profile'}
+            </div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.email || ''}
+            </div>
           </div>
           <button 
             className="btn"
