@@ -25,13 +25,14 @@ export default function Dashboard() {
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
       
       {/* Welcome Banner */}
-      <div className="card" style={{ 
-        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))',
-        border: '1px solid rgba(139, 92, 246, 0.2)'
+      <div className="card glass-card-cyber" style={{ 
+        background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(99, 102, 241, 0.12))',
+        border: '1px solid rgba(6, 182, 212, 0.25)',
+        boxShadow: '0 0 25px rgba(6, 182, 212, 0.15)'
       }}>
-        <h2>Dashboard Overview</h2>
+        <h2 className="text-gradient">Dashboard Overview</h2>
         <p style={{ color: 'var(--text-secondary)' }}>
-          Your digital twin is currently tracking <b>{profile?.total_skills_count || 0} skills</b> and <b>{profile?.total_projects_count || 0} projects</b>.
+          Your AI digital twin is actively calculating vector embeddings for <b>{profile?.total_skills_count || 0} skills</b> and <b>{profile?.total_projects_count || 0} verified projects</b>.
         </p>
       </div>
 
