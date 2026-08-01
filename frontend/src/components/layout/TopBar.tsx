@@ -10,9 +10,19 @@ export default function TopBar() {
   return (
     <header className="topbar">
       <div>
-        <h3 style={{ margin: 0 }}>Welcome back!</h3>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-          Your digital career twin is active.
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ 
+            width: '8px', 
+            height: '8px', 
+            borderRadius: '50%', 
+            background: 'var(--accent-blue)', 
+            boxShadow: '0 0 10px var(--accent-blue)',
+            display: 'inline-block' 
+          }} />
+          <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Digital Twin Portal</h3>
+        </div>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', margin: 0 }}>
+          Real-time Career Vectors & Market Predictions Active
         </p>
       </div>
 
