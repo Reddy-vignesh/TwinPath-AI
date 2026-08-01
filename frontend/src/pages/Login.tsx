@@ -7,7 +7,7 @@ import { X } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { setCredentials } = useAuthStore();
+  const { setCredentials, fetchUser } = useAuthStore();
   
   const [isRegistering, setIsRegistering] = useState(false);
   
@@ -22,48 +22,64 @@ export default function Login() {
   const [activeModal, setActiveModal] = useState<'none' | 'otp' | 'guest'>('none');
   const [otpCode, setOtpCode] = useState('');
 
-  // Handle standard registration (triggers OTP modal)
+  // Step 1 of Registration: Send OTP to user's email
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
-      await apiClient.post('/auth/send-otp', { email });
+      await apiClient.post('/auth/send-otp', { email, purpose: 'registration' });
       setActiveModal('otp');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Registration failed or disposable email blocked.');
+      setError(err.response?.data?.message || err.response?.data?.detail || 'Registration failed or disposable email blocked.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Step 2 of Registration: Verify OTP code & Create Account
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
+      // 1. Verify 6-digit OTP code with backend
+      await apiClient.post('/auth/verify-otp', {
+        email,
+        otp_code: otpCode,
+        purpose: 'registration'
+      });
+
+      // 2. Register account with first & last name
+      const names = (username || email.split('@')[0]).trim().split(' ');
+      const first_name = names[0] || 'User';
+      const last_name = names.slice(1).join(' ') || 'Student';
+
       const response = await apiClient.post('/auth/register', {
         email,
         password,
-        full_name: username,
-        otp_code: otpCode
+        first_name,
+        last_name
       });
+
+      const tokenData = response.data.data || response.data;
       setCredentials(
-        response.data.user || response.data.data?.user,
-        response.data.access_token || response.data.data?.access_token,
-        response.data.refresh_token || response.data.data?.refresh_token || ''
+        null,
+        tokenData.access_token,
+        tokenData.refresh_token || ''
       );
+      await fetchUser();
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid OTP code.');
+      setError(err.response?.data?.message || err.response?.data?.detail || 'Invalid OTP code or registration failed.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle standard login
+  // Standard Email/Password Login
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -74,20 +90,23 @@ export default function Login() {
         email,
         password,
       });
+
+      const tokenData = response.data.data || response.data;
       setCredentials(
-        response.data.user || response.data.data?.user,
-        response.data.access_token || response.data.data?.access_token,
-        response.data.refresh_token || response.data.data?.refresh_token || ''
+        null,
+        tokenData.access_token,
+        tokenData.refresh_token || ''
       );
+      await fetchUser();
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid credentials');
+      setError(err.response?.data?.message || err.response?.data?.detail || 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Google OAuth
+  // 1-Click Google OAuth Sign-In
   const handleGoogleSignIn = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
@@ -96,21 +115,27 @@ export default function Login() {
           headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
         }).then(res => res.json());
 
+        const names = (userInfo.name || '').trim().split(' ');
+        const first_name = userInfo.given_name || names[0] || 'Google';
+        const last_name = userInfo.family_name || names.slice(1).join(' ') || 'User';
+
         const response = await apiClient.post('/auth/google', {
+          credential: tokenResponse.access_token,
           email: userInfo.email,
-          name: userInfo.name,
-          google_id: userInfo.sub,
-          picture: userInfo.picture,
+          first_name,
+          last_name
         });
 
+        const tokenData = response.data.data || response.data;
         setCredentials(
-          response.data.user || response.data.data?.user,
-          response.data.access_token || response.data.data?.access_token,
-          response.data.refresh_token || response.data.data?.refresh_token || ''
+          null,
+          tokenData.access_token,
+          tokenData.refresh_token || ''
         );
+        await fetchUser();
         navigate('/dashboard');
       } catch (err: any) {
-        setError(err.response?.data?.detail || 'Google sign-in failed');
+        setError(err.response?.data?.message || err.response?.data?.detail || 'Google sign-in failed');
       } finally {
         setIsLoading(false);
       }
@@ -118,7 +143,7 @@ export default function Login() {
     onError: () => setError('Google sign-in failed'),
   });
 
-  // Guest Demo
+  // Guest Demo Mode
   const handleGuestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -127,22 +152,27 @@ export default function Login() {
     try {
       const demoEmail = `guest_${Date.now()}@demo.twinpath.ai`;
       const demoPassword = 'DemoPassword123!';
+      const names = (username || 'Guest Evaluator').trim().split(' ');
+      const first_name = names[0] || 'Guest';
+      const last_name = names.slice(1).join(' ') || 'Evaluator';
       
       const registerRes = await apiClient.post('/auth/register', {
         email: demoEmail,
         password: demoPassword,
-        full_name: username || 'Guest Evaluator',
-        is_guest: true
+        first_name,
+        last_name
       });
 
+      const tokenData = registerRes.data.data || registerRes.data;
       setCredentials(
-        registerRes.data.user || registerRes.data.data?.user,
-        registerRes.data.access_token || registerRes.data.data?.access_token,
-        registerRes.data.refresh_token || registerRes.data.data?.refresh_token || ''
+        null,
+        tokenData.access_token,
+        tokenData.refresh_token || ''
       );
+      await fetchUser();
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create guest session');
+      setError(err.response?.data?.message || err.response?.data?.detail || 'Failed to create guest session');
     } finally {
       setIsLoading(false);
     }
