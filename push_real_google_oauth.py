@@ -13,8 +13,12 @@ files_to_push = [
     ("backend/app/models/feedback.py", os.path.join(ROOT, r"backend\app\models\feedback.py")),
     ("backend/app/models/__init__.py", os.path.join(ROOT, r"backend\app\models\__init__.py")),
     ("backend/app/core/exceptions.py", os.path.join(ROOT, r"backend\app\core\exceptions.py")),
+    ("backend/app/core/middleware.py", os.path.join(ROOT, r"backend\app\core\middleware.py")),
+    ("backend/app/core/security.py", os.path.join(ROOT, r"backend\app\core\security.py")),
+    ("backend/app/core/disposable_email.py", os.path.join(ROOT, r"backend\app\core\disposable_email.py")),
     ("backend/app/config.py", os.path.join(ROOT, r"backend\app\config.py")),
     ("backend/app/db/session.py", os.path.join(ROOT, r"backend\app\db\session.py")),
+    ("backend/app/lifespan.py", os.path.join(ROOT, r"backend\app\lifespan.py")),
     ("backend/app/schemas/auth.py", os.path.join(ROOT, r"backend\app\schemas\auth.py")),
     ("backend/app/schemas/google_auth.py", os.path.join(ROOT, r"backend\app\schemas\google_auth.py")),
     ("backend/app/api/v1/endpoints/auth.py", os.path.join(ROOT, r"backend\app\api\v1\endpoints\auth.py")),
@@ -31,7 +35,12 @@ files_to_push = [
     ("frontend/src/pages/Simulator.tsx", os.path.join(ROOT, r"frontend\src\pages\Simulator.tsx")),
     ("frontend/src/pages/TwinVisualizer.tsx", os.path.join(ROOT, r"frontend\src\pages\TwinVisualizer.tsx")),
     ("frontend/src/components/FeedbackModal.tsx", os.path.join(ROOT, r"frontend\src\components\FeedbackModal.tsx")),
-    ("frontend/src/components/layout/AppShell.tsx", os.path.join(ROOT, r"frontend\src\components\layout\AppShell.tsx"))
+    ("frontend/src/components/layout/AppShell.tsx", os.path.join(ROOT, r"frontend\src\components\layout\AppShell.tsx")),
+    ("frontend/src/components/layout/TopBar.tsx", os.path.join(ROOT, r"frontend\src\components\layout\TopBar.tsx")),
+    ("frontend/src/pages/Dashboard.tsx", os.path.join(ROOT, r"frontend\src\pages\Dashboard.tsx")),
+    ("frontend/src/index.css", os.path.join(ROOT, r"frontend\src\index.css")),
+    ("frontend/src/stores/authStore.ts", os.path.join(ROOT, r"frontend\src\stores\authStore.ts")),
+    ("frontend/src/stores/themeStore.ts", os.path.join(ROOT, r"frontend\src\stores\themeStore.ts"))
 ]
 
 headers = {

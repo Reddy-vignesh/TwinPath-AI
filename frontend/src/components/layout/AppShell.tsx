@@ -67,10 +67,15 @@ export default function AppShell({ children }: AppShellProps) {
                 className="btn"
                 style={{
                   justifyContent: 'flex-start',
-                  background: isActive ? 'var(--bg-elevated)' : 'transparent',
+                  background: isActive ? 'rgba(6, 182, 212, 0.12)' : 'transparent',
                   color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                  border: isActive ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent',
-                  boxShadow: isActive ? 'var(--shadow-glow)' : 'none'
+                  borderLeft: isActive ? '3px solid var(--accent-blue)' : '3px solid transparent',
+                  borderTop: '1px solid transparent',
+                  borderRight: '1px solid transparent',
+                  borderBottom: '1px solid transparent',
+                  borderRadius: 'var(--radius-md)',
+                  transition: 'all 0.2s ease',
+                  boxShadow: isActive ? '0 0 12px var(--shadow-glow)' : 'none'
                 }}
                 onClick={() => navigate(item.path)}
               >
@@ -87,9 +92,10 @@ export default function AppShell({ children }: AppShellProps) {
             style={{ 
               width: '100%', 
               marginBottom: 'var(--spacing-md)',
-              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(59, 130, 246, 0.15))',
-              border: '1px solid rgba(139, 92, 246, 0.3)',
-              color: '#fff'
+              background: 'rgba(99, 102, 241, 0.12)',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
+              color: 'var(--accent-purple)',
+              fontWeight: 600
             }}
             onClick={() => setIsFeedbackOpen(true)}
           >
@@ -97,13 +103,23 @@ export default function AppShell({ children }: AppShellProps) {
             Feedback & Support
           </button>
 
-          <div style={{ marginBottom: 'var(--spacing-md)' }}>
-            <div style={{ fontWeight: 600 }}>{user?.firstName} {user?.lastName}</div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{user?.email}</div>
+          <div style={{ marginBottom: 'var(--spacing-md)', padding: '0.25rem 0.5rem' }}>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'User Profile'}
+            </div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.email || ''}
+            </div>
           </div>
           <button 
             className="btn"
-            style={{ width: '100%', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--error)' }}
+            style={{ 
+              width: '100%', 
+              background: 'rgba(239, 68, 68, 0.1)', 
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: 'var(--error)',
+              fontWeight: 600
+            }}
             onClick={handleLogout}
           >
             <LogOut size={18} />

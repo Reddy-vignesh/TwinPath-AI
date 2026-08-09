@@ -19,10 +19,11 @@ interface AuthState {
   error: string | null;
 
   // Actions
-  setCredentials: (user: User, accessToken: string, refreshToken: string) => void;
+  setCredentials: (user: User | null, accessToken: string, refreshToken: string) => void;
   logout: () => void;
   refresh: () => Promise<void>;
   fetchUser: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 // Helper: map snake_case user data from backend to camelCase
@@ -57,6 +58,20 @@ export const useAuthStore = create<AuthState>()(
         // Invalidate the refresh token on the server (best-effort)
         if (refreshToken) {
           apiClient.post('/auth/logout', { refresh_token: refreshToken }).catch(() => {});
+        }
+      },
+
+      deleteAccount: async () => {
+        set({ isLoading: true });
+        try {
+          await apiClient.delete('/auth/me');
+          set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, error: null });
+        } catch (error: any) {
+          const msg = error.response?.data?.message || error.response?.data?.detail || 'Failed to delete account';
+          set({ error: msg });
+          throw new Error(msg);
+        } finally {
+          set({ isLoading: false });
         }
       },
 

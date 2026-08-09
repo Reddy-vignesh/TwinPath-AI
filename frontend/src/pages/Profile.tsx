@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfileStore, type SkillCatalogItem } from '../stores/profileStore';
+import { useAuthStore } from '../stores/authStore';
 import { apiClient } from '../api/client';
 import { 
   User, GraduationCap, Target, Wrench, Award, Save, Plus, Trash2, 
@@ -71,6 +72,23 @@ export default function Profile() {
 
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  // Delete account state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const handleDeleteAccount = async () => {
+    setDeleteError('');
+    setIsDeletingAccount(true);
+    try {
+      await useAuthStore.getState().deleteAccount();
+      navigate('/login');
+    } catch (err: any) {
+      setDeleteError(err.message || 'Failed to delete account. Please try again.');
+      setIsDeletingAccount(false);
+    }
+  };
 
   // Skills sub-section state
   const [skillSearch, setSkillSearch] = useState('');
@@ -581,6 +599,34 @@ export default function Profile() {
             </div>
           </Section>
 
+          {/* ── Danger Zone: Delete Account ── */}
+          <Section title="Account Settings & Danger Zone" icon={<Trash2 size={20} color="var(--error)" />}>
+            <div style={{ padding: 'var(--spacing-xs)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
+                Deleting your account will permanently remove your profile, career vectors, preferences, and all associated digital twin data. This action cannot be undone.
+              </p>
+              <div>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setShowDeleteModal(true)}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    color: 'var(--error)',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <Trash2 size={16} />
+                  Delete My Account
+                </button>
+              </div>
+            </div>
+          </Section>
+
           {/* Bottom save */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
             <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>
@@ -597,6 +643,32 @@ export default function Profile() {
             </button>
           </div>
         </>
+      )}
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(9, 13, 22, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="card" style={{ width: '420px', border: '1px solid var(--error)', textAlign: 'center', padding: '2rem' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
+              <Trash2 size={24} color="var(--error)" />
+            </div>
+            <h3 style={{ color: 'var(--error)', marginBottom: '0.5rem' }}>Delete Account Permanently?</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+              Are you sure you want to delete your account? All your digital twin vectors, skills, and settings will be permanently removed.
+            </p>
+            {deleteError && (
+              <p style={{ color: 'var(--error)', fontSize: '0.8125rem', marginBottom: '1rem' }}>{deleteError}</p>
+            )}
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowDeleteModal(false)} disabled={isDeletingAccount}>
+                Cancel
+              </button>
+              <button type="button" className="btn" style={{ flex: 1, background: 'var(--error)', color: 'white', fontWeight: 600 }} onClick={handleDeleteAccount} disabled={isDeletingAccount}>
+                {isDeletingAccount ? 'Deleting...' : 'Yes, Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

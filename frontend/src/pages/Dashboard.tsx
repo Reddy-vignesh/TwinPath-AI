@@ -25,13 +25,14 @@ export default function Dashboard() {
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
       
       {/* Welcome Banner */}
-      <div className="card" style={{ 
-        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))',
-        border: '1px solid rgba(139, 92, 246, 0.2)'
+      <div className="card glass-card-cyber" style={{ 
+        background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(99, 102, 241, 0.12))',
+        border: '1px solid rgba(6, 182, 212, 0.25)',
+        boxShadow: '0 0 25px rgba(6, 182, 212, 0.15)'
       }}>
-        <h2>Dashboard Overview</h2>
+        <h2 className="text-gradient">Dashboard Overview</h2>
         <p style={{ color: 'var(--text-secondary)' }}>
-          Your digital twin is currently tracking <b>{profile?.total_skills_count || 0} skills</b> and <b>{profile?.total_projects_count || 0} projects</b>.
+          Your AI digital twin is actively calculating vector embeddings for <b>{profile?.total_skills_count || 0} skills</b> and <b>{profile?.total_projects_count || 0} verified projects</b>.
         </p>
       </div>
 
@@ -88,6 +89,18 @@ export default function Dashboard() {
           
           {isLoadingRecs ? (
             <div style={{ color: 'var(--text-muted)' }}>Analyzing vector space...</div>
+          ) : (profile?.total_skills_count || 0) === 0 ? (
+            <div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 'var(--spacing-xs)' }}>
+                No Profile Data Yet 🎯
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: 'var(--spacing-lg)' }}>
+                Add your skills, academic major, or target career goals in your profile to unlock your personalized AI twin match!
+              </p>
+              <button className="btn btn-primary" onClick={() => navigate('/profile')}>
+                Set Up Profile <ArrowRight size={16} />
+              </button>
+            </div>
           ) : topMatch ? (
             <div>
               <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 'var(--spacing-xs)' }}>

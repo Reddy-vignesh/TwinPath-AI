@@ -535,7 +535,6 @@ async def reset_password(
             OTPVerification.email == payload.email,
             OTPVerification.otp_code == incoming_hash,
             OTPVerification.purpose == "password_reset",
-            OTPVerification.is_used == False,
         ).order_by(OTPVerification.created_at.desc())
     )
     otp = result.scalars().first()
@@ -561,5 +560,30 @@ async def reset_password(
     return success_response(
         data=None,
         message="Password reset successfully! You can now log in with your new password.",
+    )
+
+
+@router.delete("/me", summary="Delete user account", status_code=200)
+async def delete_account(
+    current_user: TokenPayload = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Permanently delete the authenticated user account and all associated data."""
+    import uuid
+    from app.repositories.user_repository import UserRepository
+    from app.core.exceptions import NotFoundException
+
+    user_repo = UserRepository(session)
+    user = await user_repo.get_by_id(uuid.UUID(current_user.sub))
+    if not user:
+        raise NotFoundException(message="User account not found.")
+
+    await user_repo.delete(user)
+    await session.commit()
+    logger.info("User Account Deleted", user_id=current_user.sub)
+
+    return success_response(
+        data=None,
+        message="Account permanently deleted.",
     )
 
