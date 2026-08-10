@@ -4,12 +4,14 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../stores/authStore';
 import { apiClient } from '../api/client';
 import { X } from 'lucide-react';
+import Loader from '../components/Loader';
 
 export default function Login() {
   const navigate = useNavigate();
   const { setCredentials, fetchUser } = useAuthStore();
   
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isEnteringWeb, setIsEnteringWeb] = useState(false);
   
   // Form states
   const [email, setEmail] = useState('');
@@ -114,13 +116,56 @@ export default function Login() {
     }
   };
 
+  // Helper to handle transition to dashboard with a minimum 3-second loader display
+  const transitionToDashboard = async (authCall: () => Promise<any>) => {
+    setIsLoading(true);
+    try {
+      // 1. Perform the authentication call (verifies credentials)
+      const tokenData = await authCall();
+      
+      // 2. Auth succeeded! Show the premium entering loader immediately
+      setIsEnteringWeb(true);
+      
+      // 3. Keep loader visible for at least 1 full loop (3000ms)
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // 4. Set credentials in global store and fetch user profile
+      setCredentials(
+        null,
+        tokenData.access_token,
+        tokenData.refresh_token || ''
+      );
+      await fetchUser();
+      
+      // 5. Navigate to dashboard
+      navigate('/dashboard');
+    } catch (err: any) {
+      setIsEnteringWeb(false);
+      let msg = 'Authentication failed.';
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (data.message) {
+          msg = data.message;
+        } else if (data.detail) {
+          if (Array.isArray(data.detail)) {
+            msg = data.detail.map((d: any) => d.msg).join(', ');
+          } else {
+            msg = data.detail;
+          }
+        }
+      }
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Step 2 of Registration: Verify OTP code & Create Account
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
 
-    try {
+    await transitionToDashboard(async () => {
       // 1. Verify 6-digit OTP code with backend
       await apiClient.post('/auth/verify-otp', {
         email,
@@ -140,53 +185,30 @@ export default function Login() {
         last_name
       });
 
-      const tokenData = response.data.data || response.data;
-      setCredentials(
-        null,
-        tokenData.access_token,
-        tokenData.refresh_token || ''
-      );
-      await fetchUser();
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.detail || 'Invalid OTP code or registration failed.');
-    } finally {
-      setIsLoading(false);
-    }
+      return response.data.data || response.data;
+    });
   };
 
   // Standard Email/Password Login
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
 
-    try {
+    await transitionToDashboard(async () => {
       const response = await apiClient.post('/auth/login', {
         email,
         password,
       });
 
-      const tokenData = response.data.data || response.data;
-      setCredentials(
-        null,
-        tokenData.access_token,
-        tokenData.refresh_token || ''
-      );
-      await fetchUser();
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.detail || 'Invalid email or password');
-    } finally {
-      setIsLoading(false);
-    }
+      return response.data.data || response.data;
+    });
   };
 
   // 1-Click Google OAuth Sign-In
   const handleGoogleSignIn = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      try {
-        setIsLoading(true);
+      setError('');
+      await transitionToDashboard(async () => {
         const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
         }).then(res => res.json());
@@ -202,19 +224,8 @@ export default function Login() {
           last_name
         });
 
-        const tokenData = response.data.data || response.data;
-        setCredentials(
-          null,
-          tokenData.access_token,
-          tokenData.refresh_token || ''
-        );
-        await fetchUser();
-        navigate('/dashboard');
-      } catch (err: any) {
-        setError(err.response?.data?.message || err.response?.data?.detail || 'Google sign-in failed');
-      } finally {
-        setIsLoading(false);
-      }
+        return response.data.data || response.data;
+      });
     },
     onError: () => setError('Google sign-in failed'),
   });
@@ -223,9 +234,8 @@ export default function Login() {
   const handleGuestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
 
-    try {
+    await transitionToDashboard(async () => {
       const demoEmail = `guest_${Date.now()}@gmail.com`;
       const demoPassword = 'DemoPassword123!';
       const names = (username || 'Guest Evaluator').trim().split(' ');
@@ -239,20 +249,13 @@ export default function Login() {
         last_name
       });
 
-      const tokenData = registerRes.data.data || registerRes.data;
-      setCredentials(
-        null,
-        tokenData.access_token,
-        tokenData.refresh_token || ''
-      );
-      await fetchUser();
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.detail || 'Failed to create guest session');
-    } finally {
-      setIsLoading(false);
-    }
+      return registerRes.data.data || registerRes.data;
+    });
   };
+
+  if (isEnteringWeb) {
+    return <Loader message="Generating Decision Twin parameters..." />;
+  }
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--bg-base)' }}>

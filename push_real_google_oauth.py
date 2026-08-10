@@ -4,12 +4,14 @@ import json
 import urllib.request
 import time
 
-TOKEN = input("Enter GitHub Personal Access Token: ").strip()
+TOKEN = os.environ.get("GITHUB_TOKEN") or input("Enter GitHub Personal Access Token: ").strip()
 REPO = "Reddy-vignesh/TwinPath-AI"
 ROOT = r"c:\Users\vighn\Documents\mine\Decision Ai Twin"
 
 files_to_push = [
     ("backend/app/models/otp.py", os.path.join(ROOT, r"backend\app\models\otp.py")),
+    ("backend/app/models/user.py", os.path.join(ROOT, r"backend\app\models\user.py")),
+    ("backend/app/models/profile.py", os.path.join(ROOT, r"backend\app\models\profile.py")),
     ("backend/app/models/feedback.py", os.path.join(ROOT, r"backend\app\models\feedback.py")),
     ("backend/app/models/__init__.py", os.path.join(ROOT, r"backend\app\models\__init__.py")),
     ("backend/app/core/exceptions.py", os.path.join(ROOT, r"backend\app\core\exceptions.py")),
@@ -37,6 +39,8 @@ files_to_push = [
     ("frontend/src/components/FeedbackModal.tsx", os.path.join(ROOT, r"frontend\src\components\FeedbackModal.tsx")),
     ("frontend/src/components/layout/AppShell.tsx", os.path.join(ROOT, r"frontend\src\components\layout\AppShell.tsx")),
     ("frontend/src/components/layout/TopBar.tsx", os.path.join(ROOT, r"frontend\src\components\layout\TopBar.tsx")),
+    ("frontend/src/components/Loader.tsx", os.path.join(ROOT, r"frontend\src\components\Loader.tsx")),
+    ("frontend/src/components/PageLoader.tsx", os.path.join(ROOT, r"frontend\src\components\PageLoader.tsx")),
     ("frontend/src/pages/Dashboard.tsx", os.path.join(ROOT, r"frontend\src\pages\Dashboard.tsx")),
     ("frontend/src/index.css", os.path.join(ROOT, r"frontend\src\index.css")),
     ("frontend/src/stores/authStore.ts", os.path.join(ROOT, r"frontend\src\stores\authStore.ts")),

@@ -15,6 +15,7 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import TopBar from './TopBar';
 import FeedbackModal from '../FeedbackModal';
+import PageLoader from '../PageLoader';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -37,6 +38,20 @@ export default function AppShell({ children }: AppShellProps) {
   const location = useLocation();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
+  const [isPageTransitioning, setIsPageTransitioning] = useState(false);
+  const prevPathRef = React.useRef(location.pathname);
+
+  React.useEffect(() => {
+    if (location.pathname !== prevPathRef.current) {
+      prevPathRef.current = location.pathname;
+      setIsPageTransitioning(true);
+      const timer = setTimeout(() => {
+        setIsPageTransitioning(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [location.pathname]);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -44,6 +59,9 @@ export default function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="app-layout">
+      {/* Page Transition Star Loader */}
+      {isPageTransitioning && <PageLoader text="Syncing Digital Twin..." />}
+
       {/* Feedback Modal */}
       <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
 
