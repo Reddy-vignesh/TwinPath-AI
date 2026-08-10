@@ -25,8 +25,12 @@ class OTPVerification(Base, UUIDMixin, TimestampMixin):
     expires_at = Column(DateTime(timezone=True), default=default_otp_expiry, nullable=False)
 
     def is_valid(self) -> bool:
+        from datetime import datetime, timezone
         now = datetime.now(timezone.utc)
-        return not self.is_used and self.expires_at > now
+        expires_at = self.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        return not self.is_used and expires_at > now
 
     def __repr__(self) -> str:
         return f"<OTPVerification email='{self.email}' purpose='{self.purpose}' used={self.is_used}>"

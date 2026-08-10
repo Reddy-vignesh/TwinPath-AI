@@ -136,7 +136,7 @@ class StudentProfile(UUIDMixin, TimestampMixin, Base):
 
     # ── Relationships ──────────────────────────────────────────
     user: Mapped["User"] = relationship(  # noqa: F821
-        "User", backref="profile", lazy="selectin"
+        "User", back_populates="profile", lazy="selectin"
     )
     skills: Mapped[list["UserSkill"]] = relationship(  # noqa: F821
         "UserSkill", back_populates="profile",

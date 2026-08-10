@@ -57,8 +57,8 @@ export default function Login() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters and contain uppercase, lowercase, numbers, and special characters.');
       return;
     }
 
@@ -79,7 +79,20 @@ export default function Login() {
       setOtpCode('');
       setActiveModal('none');
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.detail || 'Failed to reset password.');
+      let msg = 'Failed to reset password.';
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (data.message) {
+          msg = data.message;
+        } else if (data.detail) {
+          if (Array.isArray(data.detail)) {
+            msg = data.detail.map((d: any) => d.msg).join(', ');
+          } else {
+            msg = data.detail;
+          }
+        }
+      }
+      setError(msg);
     } finally {
       setIsLoading(false);
     }

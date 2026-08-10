@@ -553,8 +553,7 @@ async def reset_password(
         raise NotFoundException(message="User account not found.")
 
     new_hash = hash_password(payload.new_password)
-    # pyrefly: ignore [bad-argument-type, missing-argument, unexpected-keyword]
-    await user_repo.update(user.id, hashed_password=new_hash)
+    await user_repo.update(user, {"hashed_password": new_hash})
     await session.commit()
 
     return success_response(

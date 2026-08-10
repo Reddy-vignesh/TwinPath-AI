@@ -67,7 +67,19 @@ export const useAuthStore = create<AuthState>()(
           await apiClient.delete('/auth/me');
           set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, error: null });
         } catch (error: any) {
-          const msg = error.response?.data?.message || error.response?.data?.detail || 'Failed to delete account';
+          let msg = 'Failed to delete account';
+          if (error.response?.data) {
+            const data = error.response.data;
+            if (data.message) {
+              msg = data.message;
+            } else if (data.detail) {
+              if (Array.isArray(data.detail)) {
+                msg = data.detail.map((d: any) => d.msg).join(', ');
+              } else {
+                msg = data.detail;
+              }
+            }
+          }
           set({ error: msg });
           throw new Error(msg);
         } finally {

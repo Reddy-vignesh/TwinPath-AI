@@ -75,6 +75,13 @@ class User(UUIDMixin, TimestampMixin, Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    profile: Mapped["StudentProfile"] = relationship(
+        "StudentProfile",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        uselist=False,
+    )
 
     # ── Table Configuration ────────────────────────────────────
     __table_args__ = (
