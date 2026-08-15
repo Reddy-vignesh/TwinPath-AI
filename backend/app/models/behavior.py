@@ -16,7 +16,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import BehaviorEventType
-from app.models.base import Base, UUIDMixin
+from app.models.base import Base, PortableJSON, UUIDMixin
 
 
 class BehaviorEvent(UUIDMixin, Base):
@@ -30,7 +30,6 @@ class BehaviorEvent(UUIDMixin, Base):
     __tablename__ = "behavior_events"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
         nullable=False,
         index=True,
     )
@@ -38,7 +37,7 @@ class BehaviorEvent(UUIDMixin, Base):
         String(50), nullable=False
     )
     event_data: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True
+        PortableJSON, nullable=True
     )
     session_id: Mapped[str | None] = mapped_column(
         String(36), nullable=True

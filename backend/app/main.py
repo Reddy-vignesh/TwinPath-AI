@@ -52,6 +52,13 @@ def create_app() -> FastAPI:
     # ── Register Routers ───────────────────────────────────────
     app.include_router(v1_router)
 
+    # ── Root Health Check Aliases (Keep-Alive / Monitoring) ─────
+    @app.get("/health", tags=["Health"], include_in_schema=False)
+    @app.get("/api/health", tags=["Health"], include_in_schema=False)
+    async def root_health_ping() -> dict[str, str]:
+        """Lightweight root health ping endpoint for cloud keep-alive monitors."""
+        return {"status": "ok", "service": "Decision Twin AI"}
+
     return app
 
 

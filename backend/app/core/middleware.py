@@ -115,7 +115,7 @@ def register_middleware(app: FastAPI, settings: Settings) -> None:
         request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         # Skip rate limiting for health checks
-        if request.url.path.startswith("/api/v1/health"):
+        if request.url.path.startswith("/api/v1/health") or request.url.path in ("/health", "/api/health"):
             return await call_next(request)
 
         # Use request.client.host directly — do NOT trust X-Forwarded-For

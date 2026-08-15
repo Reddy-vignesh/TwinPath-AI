@@ -116,3 +116,24 @@ async def dispose_engine() -> None:
         await _engine.dispose()
         _engine = None
         _session_factory = None
+
+
+async def set_sqlite_engine() -> AsyncEngine:
+    """Fallback database engine using local SQLite when PostgreSQL is offline."""
+    global _engine, _session_factory  # noqa: PLW0603
+
+    if _engine is not None:
+        await _engine.dispose()
+
+    _engine = create_async_engine(
+        "sqlite+aiosqlite:///./decisiontwin.db",
+        echo=False,
+    )
+    _session_factory = async_sessionmaker(
+        bind=_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+    )
+    return _engine

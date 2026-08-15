@@ -175,7 +175,7 @@ class AuthService:
         )
         user = await self._user_repo.create(user)
 
-        # Create guest's StudentProfile immediately to prevent 404s
+        # Create guest's clean StudentProfile
         profile = StudentProfile(
             user_id=user.id,
             twin_completeness_score=0.0,
@@ -186,6 +186,210 @@ class AuthService:
         logger.info("Guest user registered and profile created", user_id=str(user.id), email=email)
 
         # Generate tokens
+        return await self._generate_token_pair(user)
+
+    async def showcase_demo_login(self) -> TokenResponse:
+        """
+        Authenticate or initialize the permanent Showcase Demo User with a rich pre-loaded Twin profile.
+        """
+        import datetime
+        from app.models.profile import StudentProfile
+        from app.models.academic import AcademicRecord
+        from app.models.certification import Certification
+        from app.models.project import Project
+        from app.models.interest import UserInterest, Interest
+        from app.models.skill import Skill, UserSkill
+        from sqlalchemy import select
+
+        demo_email = "demo@decisiontwin.ai"
+        user = await self._user_repo.get_by_email(demo_email)
+
+        if not user:
+            raw_password = "DemoTwin2026!"
+            hashed = await run_in_threadpool(hash_password, raw_password)
+            user = User(
+                email=demo_email,
+                hashed_password=hashed,
+                first_name="Alex Vignesh",
+                last_name="(AI Lead Showcase)",
+                role=UserRole.STUDENT.value,
+                is_active=True,
+                email_verified=True,
+            )
+            user = await self._user_repo.create(user)
+
+        # Retrieve or create profile
+        stmt = select(StudentProfile).where(StudentProfile.user_id == user.id)
+        res = await self._user_repo._session.execute(stmt)
+        profile = res.scalar_one_or_none()
+
+        if not profile:
+            profile = StudentProfile(
+                user_id=user.id,
+                date_of_birth=datetime.date(2003, 5, 14),
+                gender="Male",
+                location="Hyderabad, India",
+                bio="AI Systems Engineer & Predictive Intelligence Researcher. Specializing in Deep Learning, Vector Search, FastAPI microservices, and System Architecture.",
+                phone="+91 9876543210",
+                linkedin_url="https://linkedin.com/in/alex-vignesh-ai",
+                github_url="https://github.com/alex-vignesh-ai",
+                portfolio_url="https://alexvignesh.ai",
+                highest_degree="B.Tech in Artificial Intelligence & Data Science",
+                current_major="Computer Science & Artificial Intelligence",
+                current_university="Institute of Artificial Intelligence & Technology",
+                current_cgpa=8.9,
+                graduation_year=2025,
+                career_goal_primary="AI & Machine Learning Lead",
+                career_goal_secondary="Cloud Solutions Architect",
+                preferred_industry="Artificial Intelligence & Enterprise Cloud",
+                preferred_work_style="Hybrid",
+                willing_to_relocate=True,
+                twin_completeness_score=0.95,
+                total_skills_count=10,
+                total_projects_count=3,
+                total_certifications_count=2,
+            )
+            self._user_repo._session.add(profile)
+            await self._user_repo._session.flush()
+        else:
+            profile.date_of_birth = datetime.date(2003, 5, 14)
+            profile.gender = "Male"
+            profile.location = "Hyderabad, India"
+            profile.bio = "AI Systems Engineer & Predictive Intelligence Researcher. Specializing in Deep Learning, Vector Search, FastAPI microservices, and System Architecture."
+            profile.phone = "+91 9876543210"
+            profile.linkedin_url = "https://linkedin.com/in/alex-vignesh-ai"
+            profile.github_url = "https://github.com/alex-vignesh-ai"
+            profile.portfolio_url = "https://alexvignesh.ai"
+            profile.highest_degree = "B.Tech in Artificial Intelligence & Data Science"
+            profile.current_major = "Computer Science & Artificial Intelligence"
+            profile.current_university = "Institute of Artificial Intelligence & Technology"
+            profile.current_cgpa = 8.9
+            profile.graduation_year = 2025
+            profile.career_goal_primary = "AI & Machine Learning Lead"
+            profile.career_goal_secondary = "Cloud Solutions Architect"
+            profile.preferred_industry = "Artificial Intelligence & Enterprise Cloud"
+            profile.preferred_work_style = "Hybrid"
+            profile.willing_to_relocate = True
+            profile.twin_completeness_score = 0.95
+            profile.total_skills_count = 10
+            profile.total_projects_count = 3
+            profile.total_certifications_count = 2
+            await self._user_repo._session.flush()
+
+        # 1. Master Skill Catalog & UserSkills Seeding
+        DEFAULT_SKILLS = [
+            ("Python", "technical", "Core programming language for AI & Data Science"),
+            ("PyTorch", "technical", "Deep Learning framework for predictive modeling"),
+            ("FastAPI", "technical", "High-performance async microservices web framework"),
+            ("Machine Learning", "technical", "Predictive modeling and statistical learning"),
+            ("System Architecture", "technical", "Designing scalable distributed software systems"),
+            ("AWS & Cloud Infrastructure", "technical", "Cloud deployment, EC2, S3, and serverless"),
+            ("SQL & Vector Databases", "technical", "PostgreSQL, PGVector, and relational queries"),
+            ("Data Structures & Algorithms", "technical", "Algorithmic problem solving and optimization"),
+            ("Git & CI/CD", "technical", "Version control, GitHub Actions, automated pipelines"),
+            ("Communication & Leadership", "soft_skills", "Cross-functional team leading and project management"),
+        ]
+
+        try:
+            sk_map = {}
+            for name, cat, desc in DEFAULT_SKILLS:
+                s_stmt = select(Skill).where(Skill.name == name)
+                s_res = await self._user_repo._session.execute(s_stmt)
+                sk = s_res.scalar_one_or_none()
+                if not sk:
+                    sk = Skill(name=name, category=cat, description=desc, is_verified=True)
+                    self._user_repo._session.add(sk)
+                    await self._user_repo._session.flush()
+                sk_map[name] = sk
+
+            usk_stmt = select(UserSkill).where(UserSkill.profile_id == profile.id)
+            usk_res = await self._user_repo._session.execute(usk_stmt)
+            existing_user_skills = usk_res.scalars().all()
+
+            if not existing_user_skills:
+                for name, sk_obj in sk_map.items():
+                    self._user_repo._session.add(UserSkill(
+                        profile_id=profile.id,
+                        skill_id=sk_obj.id,
+                        proficiency_level=8 if name in ["Python", "FastAPI", "Data Structures & Algorithms"] else 7,
+                        years_experience=2.5,
+                        is_primary=True,
+                        source="showcase_demo"
+                    ))
+                await self._user_repo._session.flush()
+        except Exception as e:
+            logger.warning("Skill seed error", error=str(e))
+
+        # 2. Attach Academics
+        try:
+            ac_stmt = select(AcademicRecord).where(AcademicRecord.profile_id == profile.id)
+            ac_res = await self._user_repo._session.execute(ac_stmt)
+            if not ac_res.scalars().all():
+                self._user_repo._session.add(AcademicRecord(
+                    profile_id=profile.id,
+                    institution="Institute of Artificial Intelligence & Technology",
+                    degree="B.Tech",
+                    major="Artificial Intelligence & Data Science",
+                    cgpa=8.9,
+                    max_cgpa=10.0,
+                    start_date=datetime.date(2021, 8, 1),
+                    end_date=datetime.date(2025, 6, 30),
+                    is_current=True,
+                ))
+                await self._user_repo._session.flush()
+        except Exception as e:
+            logger.warning("Academic seed warning", error=str(e))
+
+        # 3. Attach Certifications
+        try:
+            ct_stmt = select(Certification).where(Certification.profile_id == profile.id)
+            ct_res = await self._user_repo._session.execute(ct_stmt)
+            if not ct_res.scalars().all():
+                self._user_repo._session.add(Certification(
+                    profile_id=profile.id,
+                    name="AWS Certified Machine Learning - Specialty",
+                    issuing_organization="Amazon Web Services",
+                    issue_date=datetime.date(2024, 6, 15),
+                    is_verified=True,
+                ))
+                self._user_repo._session.add(Certification(
+                    profile_id=profile.id,
+                    name="Deep Learning Specialization",
+                    issuing_organization="Coursera / DeepLearning.AI",
+                    issue_date=datetime.date(2023, 11, 10),
+                    is_verified=True,
+                ))
+                await self._user_repo._session.flush()
+        except Exception as e:
+            logger.warning("Cert seed warning", error=str(e))
+
+        # 4. Attach Projects
+        try:
+            pj_stmt = select(Project).where(Project.profile_id == profile.id)
+            pj_res = await self._user_repo._session.execute(pj_stmt)
+            if not pj_res.scalars().all():
+                self._user_repo._session.add(Project(
+                    profile_id=profile.id,
+                    title="Decision Twin AI Engine",
+                    description="Autonomous digital twin platform with vector similarity search and salary predictions.",
+                    role="Lead AI Architect",
+                    technologies=["Python", "FastAPI", "PyTorch", "React", "PostgreSQL"],
+                    is_ongoing=True,
+                ))
+                self._user_repo._session.add(Project(
+                    profile_id=profile.id,
+                    title="Realtime Vector Search & RAG System",
+                    description="Distributed vector embedding pipeline handling 100k+ similarity searches per second.",
+                    role="Backend Systems Developer",
+                    technologies=["Python", "FAISS", "Docker", "Redis"],
+                    is_ongoing=False,
+                ))
+                await self._user_repo._session.flush()
+        except Exception as e:
+            logger.warning("Project seed warning", error=str(e))
+
+        await self._user_repo._session.commit()
+        logger.info("Showcase demo user logged in with full sub-entities", user_id=str(user.id), email=demo_email)
         return await self._generate_token_pair(user)
 
     async def refresh(self, refresh_token: str) -> TokenResponse:

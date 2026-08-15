@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, TrendingUp, DollarSign, Globe, BarChart2, X, ChevronRight } from 'lucide-react';
-
+import { useNavigate } from 'react-router-dom';
+import { Search, TrendingUp, DollarSign, Globe, X, ChevronRight, ArrowRight, Loader2 } from 'lucide-react';
 import { apiClient } from '../api/client';
 
 interface Career {
@@ -34,105 +34,184 @@ function demandColor(demand: string | null) {
 }
 
 function demandBg(demand: string | null) {
-  if (demand === 'high') return 'rgba(16,185,129,0.1)';
-  if (demand === 'medium') return 'rgba(245,158,11,0.1)';
-  return 'rgba(239,68,68,0.1)';
+  if (demand === 'high') return 'rgba(16, 185, 129, 0.1)';
+  if (demand === 'medium') return 'rgba(245, 158, 11, 0.1)';
+  return 'rgba(239, 68, 68, 0.1)';
+}
+
+function demandBorder(demand: string | null) {
+  if (demand === 'high') return 'rgba(16, 185, 129, 0.25)';
+  if (demand === 'medium') return 'rgba(245, 158, 11, 0.25)';
+  return 'rgba(239, 68, 68, 0.25)';
 }
 
 function formatSalary(val: number | null) {
-  if (!val) return 'N/A';
-  return `$${(val / 1000).toFixed(0)}k`;
+  if (!val || val <= 0) return 'N/A';
+  const lakhs = (val / 10000).toFixed(1);
+  return `₹${lakhs} LPA`;
 }
 
 function CareerModal({ career, onClose }: { career: Career; onClose: () => void }) {
+  const navigate = useNavigate();
   const reqSkills = Object.keys(career.required_skills ?? {});
   const prefSkills = Object.keys(career.preferred_skills ?? {});
 
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 'var(--spacing-lg)',
+        position: 'fixed', 
+        inset: 0, 
+        zIndex: 1000,
+        background: 'rgba(5, 8, 15, 0.8)', 
+        backdropFilter: 'blur(8px)',
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        padding: '1.5rem',
       }}
       onClick={onClose}
     >
       <div
         className="card animate-fade-in"
-        style={{ maxWidth: '640px', width: '100%', maxHeight: '80vh', overflowY: 'auto', position: 'relative' }}
+        style={{ 
+          maxWidth: '680px', 
+          width: '100%', 
+          maxHeight: '85vh', 
+          overflowY: 'auto', 
+          position: 'relative',
+          padding: '2rem',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.6)'
+        }}
         onClick={e => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+          style={{ 
+            position: 'absolute', 
+            top: '1.25rem', 
+            right: '1.25rem', 
+            background: 'var(--bg-elevated)', 
+            border: 'var(--micro-border)', 
+            borderRadius: 'var(--radius-sm)',
+            cursor: 'pointer', 
+            color: 'var(--text-muted)',
+            padding: '0.35rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
         >
-          <X size={20} />
+          <X size={16} />
         </button>
 
-        <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-          <h2 style={{ marginBottom: '4px' }}>{career.title}</h2>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{career.category?.replace(/_/g, ' ')}</span>
+        <div style={{ marginBottom: '1.5rem', paddingRight: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
+            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+              {career.title}
+            </h2>
+            {career.market_demand && (
+              <span style={{ 
+                background: demandBg(career.market_demand), 
+                color: demandColor(career.market_demand),
+                border: `1px solid ${demandBorder(career.market_demand)}`,
+                padding: '0.15rem 0.55rem', 
+                borderRadius: 'var(--radius-sm)', 
+                fontSize: '0.6875rem', 
+                fontWeight: 700, 
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em'
+              }}>
+                {career.market_demand} demand
+              </span>
+            )}
+          </div>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', textTransform: 'capitalize' }}>
+            {career.category?.replace(/_/g, ' ')}
+          </span>
         </div>
 
-        {/* Metrics row */}
-        <div style={{ display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap', marginBottom: 'var(--spacing-lg)' }}>
-          <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', flex: 1, minWidth: '130px' }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '4px' }}>Median Salary</div>
-            <div style={{ fontWeight: 700, color: 'var(--success)', fontSize: '1.25rem' }}>{formatSalary(career.median_salary_usd)}</div>
+        {/* Metrics Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <div style={{ background: 'var(--bg-elevated)', border: 'var(--micro-border)', borderRadius: 'var(--radius-md)', padding: '0.75rem 0.85rem' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Median Salary</div>
+            <div style={{ fontWeight: 700, color: 'var(--success)', fontSize: '1.15rem' }}>{formatSalary(career.median_salary_usd)}</div>
           </div>
-          <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', flex: 1, minWidth: '130px' }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '4px' }}>Growth Rate</div>
-            <div style={{ fontWeight: 700, color: 'var(--accent-blue)', fontSize: '1.25rem' }}>
-              {career.growth_rate_percent ? `${career.growth_rate_percent}%` : 'N/A'}
+          <div style={{ background: 'var(--bg-elevated)', border: 'var(--micro-border)', borderRadius: 'var(--radius-md)', padding: '0.75rem 0.85rem' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Growth Rate</div>
+            <div style={{ fontWeight: 700, color: 'var(--accent-primary)', fontSize: '1.15rem' }}>
+              {career.growth_rate_percent ? `+${career.growth_rate_percent}%` : 'N/A'}
             </div>
           </div>
-          <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', flex: 1, minWidth: '130px' }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '4px' }}>Automation Risk</div>
-            <div style={{ fontWeight: 700, color: career.automation_risk_percent && career.automation_risk_percent > 25 ? 'var(--error)' : 'var(--warning)', fontSize: '1.25rem' }}>
-              {career.automation_risk_percent ? `${career.automation_risk_percent}%` : 'N/A'}
+          <div style={{ background: 'var(--bg-elevated)', border: 'var(--micro-border)', borderRadius: 'var(--radius-md)', padding: '0.75rem 0.85rem' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Auto Risk</div>
+            <div style={{ fontWeight: 700, color: career.automation_risk_percent && career.automation_risk_percent > 25 ? 'var(--error)' : 'var(--warning)', fontSize: '1.15rem' }}>
+              {career.automation_risk_percent ? `${career.automation_risk_percent}%` : 'Low'}
             </div>
           </div>
-          <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', flex: 1, minWidth: '130px' }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '4px' }}>Experience Needed</div>
-            <div style={{ fontWeight: 700, fontSize: '1.25rem' }}>
-              {career.typical_experience_years ? `${career.typical_experience_years} yrs` : 'N/A'}
+          <div style={{ background: 'var(--bg-elevated)', border: 'var(--micro-border)', borderRadius: 'var(--radius-md)', padding: '0.75rem 0.85rem' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Experience</div>
+            <div style={{ fontWeight: 700, fontSize: '1.15rem', color: 'var(--text-primary)' }}>
+              {career.typical_experience_years ? `${career.typical_experience_years} yrs` : '0-2 yrs'}
             </div>
           </div>
         </div>
 
         {career.description && (
-          <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-            <h4 style={{ marginBottom: '8px' }}>Overview</h4>
-            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>{career.description}</p>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.4rem' }}>Role Synopsis</div>
+            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: '0.875rem', margin: 0 }}>{career.description}</p>
           </div>
         )}
 
         {reqSkills.length > 0 && (
-          <div style={{ marginBottom: 'var(--spacing-md)' }}>
-            <h4 style={{ marginBottom: '8px' }}>Required Skills</h4>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>Required Vector Skills</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
               {reqSkills.map(s => (
-                <span key={s} style={{ background: 'rgba(59,130,246,0.15)', color: 'var(--accent-blue)', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem' }}>{s}</span>
+                <span key={s} style={{ background: 'rgba(37, 99, 235, 0.1)', color: 'var(--accent-primary)', border: '1px solid rgba(37, 99, 235, 0.25)', padding: '0.25rem 0.6rem', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', fontWeight: 500 }}>
+                  {s}
+                </span>
               ))}
             </div>
           </div>
         )}
+
         {prefSkills.length > 0 && (
-          <div style={{ marginBottom: 'var(--spacing-md)' }}>
-            <h4 style={{ marginBottom: '8px' }}>Preferred Skills</h4>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>Preferred Distinctions</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
               {prefSkills.map(s => (
-                <span key={s} style={{ background: 'rgba(139,92,246,0.15)', color: 'var(--accent-purple)', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem' }}>{s}</span>
+                <span key={s} style={{ background: 'rgba(168, 85, 247, 0.1)', color: 'var(--accent-purple)', border: '1px solid rgba(168, 85, 247, 0.25)', padding: '0.25rem 0.6rem', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', fontWeight: 500 }}>
+                  {s}
+                </span>
               ))}
             </div>
           </div>
         )}
 
         {career.required_education && (
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: 'var(--spacing-md)' }}>
-            <strong>Education Required:</strong> {career.required_education}
-          </p>
+          <div style={{ background: 'var(--bg-elevated)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: 'var(--micro-border)', marginBottom: '1.5rem', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Education Baseline:</strong> {career.required_education}
+          </div>
         )}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '1rem', borderTop: 'var(--micro-border)' }}>
+          <button className="btn btn-secondary" onClick={onClose} style={{ fontSize: '0.8125rem' }}>
+            Close
+          </button>
+          <button 
+            className="btn btn-primary"
+            onClick={() => {
+              onClose();
+              navigate('/simulation');
+            }}
+            style={{ fontSize: '0.8125rem', gap: '0.4rem' }}
+          >
+            <span>Simulate What-If Path</span>
+            <ArrowRight size={14} />
+          </button>
+        </div>
+
       </div>
     </div>
   );
@@ -173,43 +252,50 @@ export default function CareerExplorer() {
   }, [searchQuery, activeCategory, loadCareers]);
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      
       {/* Header */}
-      <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-        <h2>Career Explorer</h2>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          Browse {careers.length > 0 ? careers.length : ''} career paths — click any card for full requirements, salary data, and growth outlook.
+      <div style={{ borderBottom: 'var(--micro-border)', paddingBottom: '1.25rem' }}>
+        <h1 style={{ margin: '0 0 0.35rem 0', fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+          Career Taxonomy & Global Registry
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0 }}>
+          Search across calibrated industry roles, skill requirements, automated market risk, and compensation envelopes.
         </p>
       </div>
 
       {/* Search + Filters */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-xl)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
         <div style={{ position: 'relative' }}>
-          <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
             className="input-field"
-            style={{ paddingLeft: '44px', fontSize: '1rem' }}
+            style={{ paddingLeft: '40px', fontSize: '0.875rem' }}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search careers: Software Engineer, Data Scientist, Designer…"
+            placeholder="Search roles: Machine Learning Engineer, Solution Architect, Product Lead..."
           />
         </div>
 
         {/* Category pills */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {CATEGORIES.map(cat => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className="btn"
               style={{
-                padding: '5px 14px', fontSize: '0.8rem',
-                background: activeCategory === cat ? 'var(--accent-blue)' : 'var(--bg-elevated)',
-                color: activeCategory === cat ? '#fff' : 'var(--text-secondary)',
-                border: `1px solid ${activeCategory === cat ? 'var(--accent-blue)' : 'rgba(255,255,255,0.1)'}`,
+                padding: '0.35rem 0.75rem', 
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                borderRadius: 'var(--radius-sm)',
+                background: activeCategory === cat ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                color: activeCategory === cat ? '#FFFFFF' : 'var(--text-secondary)',
+                border: activeCategory === cat ? '1px solid rgba(255, 255, 255, 0.2)' : 'var(--micro-border)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
               }}
             >
-              {cat === 'All' ? 'All' : cat.replace(/_/g, ' ')}
+              {cat === 'All' ? 'All Domains' : cat.replace(/_/g, ' ')}
             </button>
           ))}
         </div>
@@ -217,74 +303,92 @@ export default function CareerExplorer() {
 
       {/* Career Grid */}
       {isLoading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem', color: 'var(--text-muted)', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid rgba(59,130,246,0.3)', borderTopColor: 'var(--accent-blue)', animation: 'spin 0.8s linear infinite' }} />
-          Searching career database…
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem 0', color: 'var(--text-muted)', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+          <Loader2 size={32} className="animate-spin" color="var(--accent-primary)" />
+          <span style={{ fontSize: '0.875rem' }}>Querying career taxonomy database...</span>
         </div>
       ) : careers.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--text-muted)' }}>
-          <Globe size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-          <p>No careers found. Try a different search or category.</p>
+        <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem', color: 'var(--text-muted)' }}>
+          <Globe size={40} style={{ opacity: 0.3, marginBottom: '0.85rem' }} />
+          <p style={{ margin: 0, fontSize: '0.875rem' }}>No careers found matching your query filter.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--spacing-lg)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
           {careers.map(career => (
             <div
               key={career.id}
               className="card"
-              style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', position: 'relative' }}
+              style={{ 
+                cursor: 'pointer', 
+                padding: '1.25rem',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
               onClick={() => setSelectedCareer(career)}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)';
-                (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 40px rgba(59,130,246,0.15)';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                (e.currentTarget as HTMLElement).style.boxShadow = '';
-              }}
             >
-              {/* Demand badge */}
-              {career.market_demand && (
-                <span style={{
-                  position: 'absolute', top: '16px', right: '16px',
-                  background: demandBg(career.market_demand), color: demandColor(career.market_demand),
-                  padding: '3px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
-                }}>
-                  {career.market_demand} demand
-                </span>
-              )}
-
-              <h3 style={{ marginBottom: '4px', paddingRight: '80px' }}>{career.title}</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: 'var(--spacing-md)', textTransform: 'capitalize' }}>
-                {career.category?.replace(/_/g, ' ')}
-              </p>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: 'var(--spacing-lg)', lineHeight: 1.6,
-                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                {career.short_description || career.description || 'No description available.'}
-              </p>
-
-              {/* Stats row */}
-              <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--success)', fontSize: '0.85rem' }}>
-                  <DollarSign size={14} />
-                  {career.median_salary_usd ? `${formatSalary(career.salary_range_low)} – ${formatSalary(career.salary_range_high)}` : formatSalary(career.median_salary_usd)}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                    {career.title}
+                  </h3>
+                  
+                  {career.market_demand && (
+                    <span style={{
+                      background: demandBg(career.market_demand), 
+                      color: demandColor(career.market_demand),
+                      border: `1px solid ${demandBorder(career.market_demand)}`,
+                      padding: '0.1rem 0.45rem', 
+                      borderRadius: 'var(--radius-sm)', 
+                      fontSize: '0.6875rem', 
+                      fontWeight: 700, 
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      flexShrink: 0
+                    }}>
+                      {career.market_demand}
+                    </span>
+                  )}
                 </div>
-                {career.growth_rate_percent !== null && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-blue)', fontSize: '0.85rem' }}>
-                    <TrendingUp size={14} />
-                    {career.growth_rate_percent}% growth
-                  </div>
-                )}
-                {career.automation_risk_percent !== null && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    <BarChart2 size={14} />
-                    {career.automation_risk_percent}% auto-risk
-                  </div>
-                )}
+
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: '0 0 0.75rem 0', textTransform: 'capitalize' }}>
+                  {career.category?.replace(/_/g, ' ')}
+                </p>
+
+                <p style={{ 
+                  color: 'var(--text-secondary)', 
+                  fontSize: '0.8125rem', 
+                  margin: '0 0 1rem 0', 
+                  lineHeight: 1.5,
+                  display: '-webkit-box', 
+                  WebkitLineClamp: 2, 
+                  WebkitBoxOrient: 'vertical', 
+                  overflow: 'hidden' 
+                }}>
+                  {career.short_description || career.description || 'No description available.'}
+                </p>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-blue)', fontSize: '0.85rem' }}>
-                View details <ChevronRight size={14} />
+              {/* Stats Row */}
+              <div>
+                <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.85rem', flexWrap: 'wrap', borderTop: 'var(--micro-border)', paddingTop: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--success)', fontSize: '0.8125rem', fontWeight: 600 }}>
+                    <DollarSign size={13} />
+                    <span>{career.median_salary_usd ? `${formatSalary(career.salary_range_low)} – ${formatSalary(career.salary_range_high)}` : formatSalary(career.median_salary_usd)}</span>
+                  </div>
+                  {career.growth_rate_percent !== null && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-primary)', fontSize: '0.8125rem', fontWeight: 600 }}>
+                      <TrendingUp size={13} />
+                      <span>+{career.growth_rate_percent}%</span>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-primary)', fontSize: '0.78125rem', fontWeight: 600 }}>
+                  <span>Inspect taxonomy</span>
+                  <ChevronRight size={13} />
+                </div>
               </div>
             </div>
           ))}

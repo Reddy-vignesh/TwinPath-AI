@@ -60,8 +60,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
         logger.info("Database connection verified", host=settings.postgres_host)
     except Exception as exc:
-        logger.error("Database connection failed", error=str(exc))
-        raise
+        logger.warning("PostgreSQL connection unavailable, initializing local SQLite database fallback", error=str(exc))
+        from app.db.session import set_sqlite_engine
+        engine = await set_sqlite_engine()
+        async with engine.begin() as conn:
+            from app.models.base import Base
+            import app.models  # noqa: F401
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Local SQLite database initialized and schema created successfully")
 
     # Phase 3: Load ML models into app.state
     # app.state.career_ranker = load_career_ranker()

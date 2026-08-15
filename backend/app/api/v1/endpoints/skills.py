@@ -86,9 +86,16 @@ async def get_my_skills(
     service: TwinDataService = Depends(_get_service),
 ) -> dict[str, Any]:
     skills = await service.get_skills(uuid.UUID(current_user.sub))
+    data = []
+    for s in skills:
+        if getattr(s, "skill", None) is None:
+            sk = await service.skill_catalog_repo.get_by_id(s.skill_id)
+            if sk:
+                s.skill = sk
+        data.append(UserSkillRead.model_validate(s).model_dump(mode="json"))
     return success_response(
-        data=[UserSkillRead.model_validate(s).model_dump(mode="json") for s in skills],
-        message=f"Found {len(skills)} skills.",
+        data=data,
+        message=f"Found {len(data)} skills.",
     )
 
 

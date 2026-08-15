@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 _pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto",
-    bcrypt__rounds=12,
+    bcrypt__rounds=10,
 )
 
 

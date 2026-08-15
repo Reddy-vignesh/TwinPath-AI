@@ -89,16 +89,14 @@ export const useAuthStore = create<AuthState>()(
 
       refresh: async () => {
         const refreshToken = get().refreshToken;
-        if (!refreshToken) {
-          set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
-          throw new Error('No refresh token available');
-        }
         try {
-          const response = await apiClient.post('/auth/refresh', { refresh_token: refreshToken });
-          const { access_token, refresh_token } = response.data.data;
+          // Pass refresh_token in body if available in memory, otherwise backend extracts httpOnly cookie
+          const payload = refreshToken ? { refresh_token: refreshToken } : {};
+          const response = await apiClient.post('/auth/refresh', payload);
+          const { access_token, refresh_token: newRefresh } = response.data.data;
           set({
             accessToken: access_token,
-            refreshToken: refresh_token ?? refreshToken, // use new one if returned
+            refreshToken: newRefresh ?? refreshToken,
             isAuthenticated: true,
           });
         } catch (error) {
@@ -124,10 +122,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      // Persist tokens and auth state across page refreshes
+      // Persist user and session info across page refreshes (refreshToken is protected via httpOnly cookie)
       partialize: (state) => ({
         accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
         user: state.user,
       }),

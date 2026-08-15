@@ -9,19 +9,18 @@ Not user-editable — managed by admins.
 from __future__ import annotations
 
 from sqlalchemy import Float, Index, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import DESCRIPTION_MAX_LENGTH, TITLE_MAX_LENGTH
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.base import Base, PortableJSON, TimestampMixin, UUIDMixin
 
 
 class Career(UUIDMixin, TimestampMixin, Base):
     """
-    Career definition in the master catalog.
+    Career catalog entry representing an occupation.
 
-    Contains career metadata used by the recommendation engine
-    for matching, scoring, salary prediction, and skill gap analysis.
+    Contains aggregate market data, salary ranges, skill requirements,
+    and growth metrics. Used for recommendation matching and vector search.
     """
 
     __tablename__ = "careers"
@@ -33,24 +32,23 @@ class Career(UUIDMixin, TimestampMixin, Base):
         index=True,
     )
     category: Mapped[str] = mapped_column(
-        String(50), nullable=False, index=True
+        String(50),
+        nullable=False,
+        index=True,
     )
     description: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )
-    short_description: Mapped[str | None] = mapped_column(
-        String(500), nullable=True
-    )
 
-    # ── Market Data ────────────────────────────────────────────
-    median_salary_usd: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
+    # ── Financial & Market Metrics ──────────────────────────────
+    median_salary_usd: Mapped[float | None] = mapped_column(
+        Float, nullable=True
     )
-    salary_range_low: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
+    salary_range_low: Mapped[float | None] = mapped_column(
+        Float, nullable=True
     )
-    salary_range_high: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
+    salary_range_high: Mapped[float | None] = mapped_column(
+        Float, nullable=True
     )
     growth_rate_percent: Mapped[float | None] = mapped_column(
         Float, nullable=True
@@ -59,32 +57,29 @@ class Career(UUIDMixin, TimestampMixin, Base):
         Float, nullable=True
     )
     market_demand: Mapped[str | None] = mapped_column(
-        String(20), nullable=True  # high, medium, low
-    )
-    job_outlook: Mapped[str | None] = mapped_column(
         String(50), nullable=True
     )
 
     # ── Requirements ───────────────────────────────────────────
-    required_education: Mapped[str | None] = mapped_column(
+    education_level_min: Mapped[str | None] = mapped_column(
         String(100), nullable=True
     )
     typical_experience_years: Mapped[int | None] = mapped_column(
         Integer, nullable=True
     )
     required_skills: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True
+        PortableJSON, nullable=True
     )
     preferred_skills: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True
+        PortableJSON, nullable=True
     )
     required_certifications: Mapped[list | None] = mapped_column(
-        JSONB, nullable=True
+        PortableJSON, nullable=True
     )
 
     # ── Metadata ───────────────────────────────────────────────
     related_careers: Mapped[list | None] = mapped_column(
-        JSONB, nullable=True
+        PortableJSON, nullable=True
     )
     work_environment: Mapped[str | None] = mapped_column(
         String(100), nullable=True

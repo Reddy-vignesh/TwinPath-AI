@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/authStore';
 import { apiClient } from '../api/client';
 import { X } from 'lucide-react';
 import Loader from '../components/Loader';
+import { ProjectInfoFloatingTrigger } from '../components/ProjectInfoModal';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   
   // UI states
   const [error, setError] = useState('');
@@ -29,6 +32,16 @@ export default function Login() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [forgotSuccessMessage, setForgotSuccessMessage] = useState('');
+
+  const renderWaveLabel = (text: string) => (
+    <label>
+      {text.split('').map((char, i) => (
+        <span key={i} style={{ transitionDelay: `${i * 50}ms` }}>
+          {char === ' ' ? '\u00A0' : char}
+        </span>
+      ))}
+    </label>
+  );
 
   // Forgot Password Step 1: Send OTP code
   const handleSendForgotOTP = async (e: React.FormEvent) => {
@@ -230,35 +243,34 @@ export default function Login() {
     onError: () => setError('Google sign-in failed'),
   });
 
+  // 1-Click Pre-Loaded Showcase Demo Mode
+  const handleShowcaseDemoSubmit = async () => {
+    setError('');
+    await transitionToDashboard(async () => {
+      const demoRes = await apiClient.post('/auth/demo');
+      return demoRes.data.data || demoRes.data;
+    });
+  };
+
   // Guest Demo Mode
   const handleGuestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     await transitionToDashboard(async () => {
-      const demoEmail = `guest_${Date.now()}@gmail.com`;
-      const demoPassword = 'DemoPassword123!';
-      const names = (username || 'Guest Evaluator').trim().split(' ');
-      const first_name = names[0] || 'Guest';
-      const last_name = names.slice(1).join(' ') || 'Evaluator';
-      
-      const registerRes = await apiClient.post('/auth/register', {
-        email: demoEmail,
-        password: demoPassword,
-        first_name,
-        last_name
+      const guestRes = await apiClient.post('/auth/guest', {
+        name: username.trim() || 'Guest Evaluator',
       });
-
-      return registerRes.data.data || registerRes.data;
+      return guestRes.data.data || guestRes.data;
     });
   };
 
   if (isEnteringWeb) {
-    return <Loader message="Generating Decision Twin parameters..." />;
+    return <Loader message="ENTERING TWINPATH AI ENGINE..." />;
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--bg-base)' }}>
+    <div className="rain-bg-container">
       <div className={`animated-auth-container ${isRegistering ? 'active' : ''}`}>
         
         <div className="curved-shaped"></div>
@@ -266,42 +278,109 @@ export default function Login() {
 
         {/* LOGIN FORM */}
         <div className="form-box Login">
-          <h2 className="animation" style={{ '--D': 0, '--S': 21 } as React.CSSProperties}>Login</h2>
+          <h2 className="animation" style={{ '--D': 0, '--S': 21 } as React.CSSProperties}>TwinPath AI - Login</h2>
           <form onSubmit={handleLoginSubmit}>
             <div className="input-box animation" style={{ '--D': 1, '--S': 22 } as React.CSSProperties}>
               <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-              <label>Email Address</label>
+              {renderWaveLabel('Email Address')}
               <i className="bx bx-at"></i>
             </div>
+
             <div className="input-box animation" style={{ '--D': 2, '--S': 23 } as React.CSSProperties}>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-              <label>Password</label>
-              <i className="bx bx-lock"></i>
+              <input type={showPassword ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} />
+              {renderWaveLabel('Password')}
+              <a 
+                className="btn-forgot inline-forgot" 
+                onClick={() => { setError(''); setForgotSuccessMessage(''); setForgotEmail(email || ''); setActiveModal('forgot_email'); }}
+              >
+                Forgot Password?
+              </a>
+              <button 
+                type="button" 
+                className={`toggle-btn ${showPassword ? 'active' : ''}`} 
+                onClick={() => setShowPassword(!showPassword)} 
+                aria-label="Toggle Password Visibility"
+              >
+                <svg className="eye-icon" viewBox="0 0 24 24">
+                  <path className="eye-open-lid" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle className="pupil" cx="12" cy="12" r="3"></circle>
+                  <path className="eye-closed-lid" d="M2 10c2.5 3 6 5 10 5s7.5-2 10-5"></path>
+                  <g className="eye-lashes">
+                    <line x1="4" y1="13" x2="2" y2="16"></line>
+                    <line x1="8.5" y1="15" x2="7.5" y2="18.5"></line>
+                    <line x1="12" y1="15.5" x2="12" y2="19.5"></line>
+                    <line x1="15.5" y1="15" x2="16.5" y2="18.5"></line>
+                    <line x1="20" y1="13" x2="22" y2="16"></line>
+                  </g>
+                </svg>
+              </button>
             </div>
+
             <div className="animation" style={{ '--D': 3, '--S': 24 } as React.CSSProperties}>
-              <button className="btn" type="submit" disabled={isLoading}>
-                {isLoading ? 'Wait...' : 'Login'}
+              <button className="btn btn-primary" type="submit" disabled={isLoading} style={{ width: '100%', padding: '12px 20px', borderRadius: '12px', fontWeight: 600, fontSize: '0.95rem' }}>
+                {isLoading ? 'Logging in...' : 'Login'}
+              </button>
+            </div>
+
+            {/* Dedicated 1-Click Pre-Loaded Showcase Demo Button */}
+            <div className="animation" style={{ '--D': 3.5, '--S': 24.5, marginTop: '10px' } as React.CSSProperties}>
+              <button
+                type="button"
+                onClick={handleShowcaseDemoSubmit}
+                disabled={isLoading}
+                style={{
+                  width: '100%',
+                  padding: '11px 16px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, rgba(59,130,246,0.25) 0%, rgba(147,51,234,0.25) 100%)',
+                  border: '1px solid rgba(168,85,247,0.5)',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: '0 0 15px rgba(147,51,234,0.2)',
+                  transition: 'all 0.25s ease',
+                }}
+              >
+                <span>🚀 Explore Pre-Loaded Showcase Demo</span>
+                <span style={{ fontSize: '0.72rem', opacity: 0.85, fontWeight: 500 }}>(1-Click)</span>
               </button>
             </div>
             
-            <div className="auth-aux-options animation" style={{ '--D': 4, '--S': 25 } as React.CSSProperties}>
-              <a onClick={() => handleGoogleSignIn()} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
-                Google
-              </a>
-              <a onClick={() => setActiveModal('guest')}>Guest Demo</a>
-              <a onClick={() => { setError(''); setForgotSuccessMessage(''); setForgotEmail(email || ''); setActiveModal('forgot_email'); }}>Forgot Password?</a>
+            {/* Neon Glowing OR Divider */}
+            <div className="auth-or-divider animation" style={{ '--D': 4, '--S': 25 } as React.CSSProperties}>
+              <span>OR</span>
             </div>
 
-            <div className="regi-link animation" style={{ '--D': 5, '--S': 26 } as React.CSSProperties}>
-              <p>Don't have an account? <a onClick={() => setIsRegistering(true)}>signup</a></p>
+            {/* Prismatic Shimmer Google & Holographic Guest Buttons */}
+            <div className="auth-aux-container animation" style={{ '--D': 5, '--S': 26 } as React.CSSProperties}>
+              <button 
+                type="button" 
+                className="btn-google" 
+                onClick={() => handleGoogleSignIn()}
+              >
+                <svg className="g-logo" viewBox="0 0 48 48">
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.7 17.74 9.5 24 9.5z"/>
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                </svg>
+                <span>Sign in with Google</span>
+              </button>
+
+              <button 
+                type="button" 
+                className="btn-guest" 
+                onClick={() => setActiveModal('guest')}
+              >
+                <span>Login as Guest</span>
+              </button>
             </div>
           </form>
-        </div>
-
-        <div className="info-content Login">
-          <h2 className="animation" style={{ '--D': 0, '--S': 20 } as React.CSSProperties}>Welcome Back !</h2>
-          <p className="animation" style={{ '--D': 1, '--S': 21 } as React.CSSProperties}>Enter your credentials to access your account.</p>
         </div>
 
         {/* REGISTER FORM */}
@@ -310,32 +389,74 @@ export default function Login() {
           <form onSubmit={handleRegisterSubmit}>
             <div className="input-box animation" style={{ '--li': 18, '--S': 1 } as React.CSSProperties}>
               <input type="text" required value={username} onChange={(e) => setUsername(e.target.value)} />
-              <label>Full Name</label>
+              {renderWaveLabel('Full Name')}
               <i className="bx bx-user"></i>
             </div>
             <div className="input-box animation" style={{ '--li': 19, '--S': 2 } as React.CSSProperties}>
               <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-              <label>Official Email</label>
+              {renderWaveLabel('Official Email')}
               <i className="bx bx-at"></i>
             </div>
             <div className="input-box animation" style={{ '--li': 20, '--S': 3 } as React.CSSProperties}>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-              <label>Password</label>
-              <i className="bx bx-lock"></i>
-            </div>
-            <div className="animation" style={{ '--li': 21, '--S': 4 } as React.CSSProperties}>
-              <button className="btn" type="submit" disabled={isLoading}>
-                {isLoading ? 'Wait...' : 'Register'}
+              <input type={showPassword ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} />
+              {renderWaveLabel('Password')}
+              <button 
+                type="button" 
+                className={`toggle-btn ${showPassword ? 'active' : ''}`} 
+                onClick={() => setShowPassword(!showPassword)} 
+                aria-label="Toggle Password Visibility"
+              >
+                <svg className="eye-icon" viewBox="0 0 24 24">
+                  <path className="eye-open-lid" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle className="pupil" cx="12" cy="12" r="3"></circle>
+                  <path className="eye-closed-lid" d="M2 10c2.5 3 6 5 10 5s7.5-2 10-5"></path>
+                  <g className="eye-lashes">
+                    <line x1="4" y1="13" x2="2" y2="16"></line>
+                    <line x1="8.5" y1="15" x2="7.5" y2="18.5"></line>
+                    <line x1="12" y1="15.5" x2="12" y2="19.5"></line>
+                    <line x1="15.5" y1="15" x2="16.5" y2="18.5"></line>
+                    <line x1="20" y1="13" x2="22" y2="16"></line>
+                  </g>
+                </svg>
               </button>
             </div>
-            <div className="regi-link animation" style={{ '--li': 22, '--S': 5 } as React.CSSProperties}>
-              <p>Have an account? <a onClick={() => setIsRegistering(false)}>Sign In</a></p>
+            <div className="animation" style={{ '--li': 21, '--S': 4 } as React.CSSProperties}>
+              <button className="btn btn-primary" type="submit" disabled={isLoading} style={{ width: '100%', padding: '12px 20px', borderRadius: '12px', fontWeight: 600, fontSize: '0.95rem' }}>
+                {isLoading ? 'Creating Account...' : 'Register'}
+              </button>
             </div>
           </form>
         </div>
+
+        {/* WELCOME TILT PANELS & TEXT */}
+        <div className="info-content Login">
+          <h2 className="animation" style={{ '--D': 0, '--S': 20 } as React.CSSProperties}>NEW JOURNEY?</h2>
+          <h3 className="animation panel-subtitle" style={{ '--D': 1, '--S': 21 } as React.CSSProperties}>Build Your AI Twin</h3>
+          <p className="animation panel-desc" style={{ '--D': 2, '--S': 22 } as React.CSSProperties}>Unlock intelligent simulation and predictive decision modeling in seconds.</p>
+          <div className="animation" style={{ '--D': 3, '--S': 23 } as React.CSSProperties}>
+            <button 
+              type="button" 
+              className="glass-pill-aura-btn" 
+              onClick={() => setIsRegistering(true)}
+            >
+              SIGN UP
+            </button>
+          </div>
+        </div>
+
         <div className="info-content Register">
-          <h2 className="animation" style={{ '--li': 17, '--S': 0 } as React.CSSProperties}>Welcome</h2>
-          <p className="animation" style={{ '--li': 18, '--S': 1 } as React.CSSProperties}>Join us today and unlock access to your personalized dashboard.</p>
+          <h2 className="animation" style={{ '--li': 17, '--S': 0 } as React.CSSProperties}>WELCOME BACK!</h2>
+          <h3 className="animation panel-subtitle" style={{ '--li': 18, '--S': 1 } as React.CSSProperties}>Sync Your Twin</h3>
+          <p className="animation panel-desc" style={{ '--li': 19, '--S': 2 } as React.CSSProperties}>Enter your credentials to re-sync with your Decision AI Engine.</p>
+          <div className="animation" style={{ '--li': 20, '--S': 3 } as React.CSSProperties}>
+            <button 
+              type="button" 
+              className="glass-pill-aura-btn" 
+              onClick={() => setIsRegistering(false)}
+            >
+              SIGN IN
+            </button>
+          </div>
         </div>
       </div>
 
@@ -354,6 +475,9 @@ export default function Login() {
           <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><X size={16}/></button>
         </div>
       )}
+
+      {/* Floating About Project Button & Modal */}
+      <ProjectInfoFloatingTrigger />
 
       {/* OTP MODAL (REGISTRATION) */}
       {activeModal === 'otp' && (
@@ -438,28 +562,68 @@ export default function Login() {
                 />
               </div>
 
-              <div style={{ marginBottom: '1rem', textAlign: 'left' }}>
+              <div style={{ marginBottom: '1rem', textAlign: 'left', position: 'relative' }}>
                 <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>New Password</label>
                 <input
-                  type="password"
+                  type={showNewPassword ? 'text' : 'password'}
                   required
-                  style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid rgba(255, 255, 255, 0.1)', color: 'white', borderRadius: '8px', outline: 'none', fontSize: '0.95rem' }}
+                  style={{ width: '100%', padding: '0.75rem 2.5rem 0.75rem 1rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid rgba(255, 255, 255, 0.1)', color: 'white', borderRadius: '8px', outline: 'none', fontSize: '0.95rem' }}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="At least 6 characters"
                 />
+                <button 
+                  type="button" 
+                  className={`toggle-btn ${showNewPassword ? 'active' : ''}`} 
+                  style={{ top: '65%' }}
+                  onClick={() => setShowNewPassword(!showNewPassword)} 
+                  aria-label="Toggle Password Visibility"
+                >
+                  <svg className="eye-icon" viewBox="0 0 24 24">
+                    <path className="eye-open-lid" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle className="pupil" cx="12" cy="12" r="3"></circle>
+                    <path className="eye-closed-lid" d="M2 10c2.5 3 6 5 10 5s7.5-2 10-5"></path>
+                    <g className="eye-lashes">
+                      <line x1="4" y1="13" x2="2" y2="16"></line>
+                      <line x1="8.5" y1="15" x2="7.5" y2="18.5"></line>
+                      <line x1="12" y1="15.5" x2="12" y2="19.5"></line>
+                      <line x1="15.5" y1="15" x2="16.5" y2="18.5"></line>
+                      <line x1="20" y1="13" x2="22" y2="16"></line>
+                    </g>
+                  </svg>
+                </button>
               </div>
 
-              <div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
+              <div style={{ marginBottom: '1.5rem', textAlign: 'left', position: 'relative' }}>
                 <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>Confirm New Password</label>
                 <input
-                  type="password"
+                  type={showNewPassword ? 'text' : 'password'}
                   required
-                  style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid rgba(255, 255, 255, 0.1)', color: 'white', borderRadius: '8px', outline: 'none', fontSize: '0.95rem' }}
+                  style={{ width: '100%', padding: '0.75rem 2.5rem 0.75rem 1rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid rgba(255, 255, 255, 0.1)', color: 'white', borderRadius: '8px', outline: 'none', fontSize: '0.95rem' }}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter new password"
                 />
+                <button 
+                  type="button" 
+                  className={`toggle-btn ${showNewPassword ? 'active' : ''}`} 
+                  style={{ top: '65%' }}
+                  onClick={() => setShowNewPassword(!showNewPassword)} 
+                  aria-label="Toggle Password Visibility"
+                >
+                  <svg className="eye-icon" viewBox="0 0 24 24">
+                    <path className="eye-open-lid" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle className="pupil" cx="12" cy="12" r="3"></circle>
+                    <path className="eye-closed-lid" d="M2 10c2.5 3 6 5 10 5s7.5-2 10-5"></path>
+                    <g className="eye-lashes">
+                      <line x1="4" y1="13" x2="2" y2="16"></line>
+                      <line x1="8.5" y1="15" x2="7.5" y2="18.5"></line>
+                      <line x1="12" y1="15.5" x2="12" y2="19.5"></line>
+                      <line x1="15.5" y1="15" x2="16.5" y2="18.5"></line>
+                      <line x1="20" y1="13" x2="22" y2="16"></line>
+                    </g>
+                  </svg>
+                </button>
               </div>
 
               <div style={{ display: 'flex', gap: '1rem' }}>

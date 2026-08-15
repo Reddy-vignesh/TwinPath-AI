@@ -19,7 +19,7 @@ from app.core.constants import (
     TITLE_MAX_LENGTH,
     URL_MAX_LENGTH,
 )
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.base import Base, PortableARRAY, TimestampMixin, UUIDMixin
 
 
 class Project(UUIDMixin, TimestampMixin, Base):
@@ -28,7 +28,6 @@ class Project(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "projects"
 
     profile_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
         ForeignKey("student_profiles.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -57,7 +56,7 @@ class Project(UUIDMixin, TimestampMixin, Base):
         String(100), nullable=True
     )
     technologies: Mapped[list[str] | None] = mapped_column(
-        ARRAY(String(50)), nullable=True
+        PortableARRAY, nullable=True
     )
     impact_description: Mapped[str | None] = mapped_column(
         String(DESCRIPTION_MAX_LENGTH), nullable=True

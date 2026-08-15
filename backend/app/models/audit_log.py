@@ -14,7 +14,7 @@ from sqlalchemy import DateTime, Index, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, UUIDMixin
+from app.models.base import Base, PortableJSON, UUIDMixin
 
 
 class AuditLog(UUIDMixin, Base):
@@ -28,7 +28,6 @@ class AuditLog(UUIDMixin, Base):
     __tablename__ = "audit_logs"
 
     user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
         nullable=True,
         index=True,
     )
@@ -54,7 +53,7 @@ class AuditLog(UUIDMixin, Base):
     )
     metadata_: Mapped[dict | None] = mapped_column(
         "metadata",
-        JSONB,
+        PortableJSON,
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(

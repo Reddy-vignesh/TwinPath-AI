@@ -4,53 +4,84 @@ import { useProfileStore, type SkillCatalogItem } from '../stores/profileStore';
 import { useAuthStore } from '../stores/authStore';
 import { apiClient } from '../api/client';
 import { 
-  User, GraduationCap, Target, Wrench, Award, Save, Plus, Trash2, 
-  Search, CheckCircle, ChevronDown, ChevronUp, Loader2
+  User, GraduationCap, Target, Wrench, Save, Plus, Trash2, 
+  Search, CheckCircle, ChevronDown, ChevronUp, Loader2, UploadCloud,
+  Globe, Code2, HelpCircle, CheckCheck, AlertCircle
 } from 'lucide-react';
 
-// ── Section collapse wrapper ──────────────────────────────────────
-function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+function Section({ title, icon, children, badge }: { title: string; icon: React.ReactNode; children: React.ReactNode; badge?: string }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
+    <div className="card" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.25rem' }}>
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
         style={{
-          display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%',
+          display: 'flex', alignItems: 'center', gap: '0.65rem', width: '100%',
           background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-          color: 'var(--text-primary)', marginBottom: open ? 'var(--spacing-lg)' : 0,
+          color: 'var(--text-primary)', marginBottom: open ? '1.25rem' : 0,
         }}
       >
         {icon}
-        <h3 style={{ margin: 0, flex: 1, textAlign: 'left' }}>{title}</h3>
-        {open ? <ChevronUp size={18} color="var(--text-muted)" /> : <ChevronDown size={18} color="var(--text-muted)" />}
+        <h3 style={{ margin: 0, flex: 1, textAlign: 'left', fontSize: '1.05rem', fontWeight: 700, letterSpacing: '-0.01em' }}>
+          {title}
+        </h3>
+        {badge && (
+          <span style={{ 
+            fontSize: '0.6875rem', 
+            fontWeight: 600, 
+            padding: '0.15rem 0.5rem', 
+            borderRadius: 'var(--radius-sm)', 
+            background: 'rgba(37, 99, 235, 0.1)', 
+            color: 'var(--accent-primary)',
+            border: '1px solid rgba(37, 99, 235, 0.25)',
+            marginRight: '0.5rem'
+          }}>
+            {badge}
+          </span>
+        )}
+        {open ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
       </button>
       {open && children}
     </div>
   );
 }
 
-// ── Proficiency label helper ──────────────────────────────────────
-function profLabel(level: number) {
-  if (level <= 2) return 'Beginner';
-  if (level <= 4) return 'Elementary';
-  if (level <= 6) return 'Intermediate';
-  if (level <= 8) return 'Advanced';
-  return 'Expert';
-}
+// Academic Degree Mappings
+const DEGREE_OPTIONS_BY_LEVEL: Record<string, string[]> = {
+  'Undergraduate': ['B.Tech', 'B.E.', 'B.Sc', 'BCA', 'BBA', 'B.Com', 'BA', 'MBBS', 'Other Undergraduate Degree'],
+  'Postgraduate': ['M.Tech', 'M.E.', 'MBA', 'MCA', 'M.Sc', 'M.Com', 'MA', 'Other Postgraduate Degree'],
+  'Diploma': ['Polytechnic Diploma', 'Post Graduate Diploma', 'Vocational Diploma', 'Other Diploma'],
+  'PhD': ['Ph.D in Engineering / Computer Science', 'Ph.D in Sciences', 'Ph.D in Management / Humanities', 'Other Doctorate'],
+  'High School': ['10+2 / Higher Secondary (Science)', '10+2 / Higher Secondary (Commerce)', '10+2 / Higher Secondary (Arts/Humanities)'],
+};
+
+// Application Context Checkboxes
+const APPLICATION_CONTEXTS = [
+  'Academic',
+  'Personal Projects',
+  'Internship',
+  'Professional Work',
+  'Freelancing',
+  'Open Source',
+  'Learning / No Practical Application Yet'
+];
 
 export default function Profile() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const {
     profile, skills, skillCatalog,
     isLoading, isSaving, isLoadingSkills,
     fetchProfile, updateProfile, fetchSkills,
     searchSkillCatalog, addSkill, removeSkill,
-    error,
   } = useProfileStore();
 
-  // Local form state mirrors the profile
+  // User identity names
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+
+  // Main Profile Evidence Form
   const [form, setForm] = useState({
     bio: '',
     location: '',
@@ -58,25 +89,298 @@ export default function Profile() {
     linkedin_url: '',
     github_url: '',
     portfolio_url: '',
-    current_cgpa: '',
-    highest_degree: '',
+    coding_platform: 'LeetCode',
+    coding_url: '',
+    education_level: 'Undergraduate',
+    highest_degree: 'B.Tech',
     current_major: '',
     current_university: '',
+    current_cgpa: '',
     graduation_year: '',
     career_goal_primary: '',
     career_goal_secondary: '',
     preferred_industry: '',
-    preferred_work_style: '',
+    company_type: 'Product Company',
+    preferred_work_style: 'Hybrid',
+    preferred_team_size: 'Medium (11-50)',
+    preferred_location: '',
     willing_to_relocate: false,
   });
 
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState('');
 
-  // Delete account state
+  // Delete account modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  // Skill Intelligence Builder State
+  const [skillSearch, setSkillSearch] = useState('');
+  const [selectedSkill, setSelectedSkill] = useState<SkillCatalogItem | null>(null);
+  const [proficiencyLevel, setProficiencyLevel] = useState<'Beginner' | 'Intermediate' | 'Advanced' | 'Expert'>('Intermediate');
+  const [selectedContexts, setSelectedContexts] = useState<string[]>(['Personal Projects']);
+  const [skillError, setSkillError] = useState('');
+  const [addingSkill, setAddingSkill] = useState(false);
+
+  // Resume Ingestion States
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [resumeSuccessBanner, setResumeSuccessBanner] = useState<string | null>(null);
+  const [resumeError, setResumeError] = useState('');
+
+  useEffect(() => {
+    fetchProfile();
+    fetchSkills();
+  }, [fetchProfile, fetchSkills]);
+
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || '');
+      setLastName(user.lastName || '');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (profile) {
+      // Determine initial education level from highest_degree if present
+      let initialLevel = 'Undergraduate';
+      if (profile.highest_degree) {
+        for (const [lvl, degrees] of Object.entries(DEGREE_OPTIONS_BY_LEVEL)) {
+          if (degrees.includes(profile.highest_degree)) {
+            initialLevel = lvl;
+            break;
+          }
+        }
+      }
+
+      setForm({
+        bio: profile.bio ?? '',
+        location: profile.location ?? '',
+        phone: profile.phone ?? '',
+        linkedin_url: profile.linkedin_url ?? '',
+        github_url: profile.github_url ?? '',
+        portfolio_url: profile.portfolio_url ?? '',
+        coding_platform: 'LeetCode',
+        coding_url: '',
+        education_level: initialLevel,
+        highest_degree: profile.highest_degree ?? (DEGREE_OPTIONS_BY_LEVEL[initialLevel]?.[0] || 'B.Tech'),
+        current_major: profile.current_major ?? '',
+        current_university: profile.current_university ?? '',
+        current_cgpa: profile.current_cgpa?.toString() ?? '',
+        graduation_year: profile.graduation_year?.toString() ?? '',
+        career_goal_primary: profile.career_goal_primary ?? '',
+        career_goal_secondary: profile.career_goal_secondary ?? '',
+        preferred_industry: profile.preferred_industry ?? '',
+        company_type: 'Product Company',
+        preferred_work_style: profile.preferred_work_style ?? 'Hybrid',
+        preferred_team_size: 'Medium (11-50)',
+        preferred_location: profile.location ?? '',
+        willing_to_relocate: profile.willing_to_relocate ?? false,
+      });
+    }
+  }, [profile]);
+
+  const handleField = (field: string, value: any) => {
+    setForm(f => {
+      const updated = { ...f, [field]: value };
+      // When education_level changes, auto-set highest_degree to first degree in that level
+      if (field === 'education_level') {
+        const availableDegrees = DEGREE_OPTIONS_BY_LEVEL[value] || [];
+        updated.highest_degree = availableDegrees[0] || '';
+      }
+      return updated;
+    });
+  };
+
+  const toggleContext = (ctx: string) => {
+    setSelectedContexts(prev => {
+      if (ctx === 'Learning / No Practical Application Yet') {
+        return prev.includes(ctx) ? [] : [ctx];
+      }
+      const filtered = prev.filter(c => c !== 'Learning / No Practical Application Yet');
+      return filtered.includes(ctx) ? filtered.filter(c => c !== ctx) : [...filtered, ctx];
+    });
+  };
+
+  const handleSave = async () => {
+    setSaveError('');
+    setSaveSuccess(false);
+
+    // URL Validations
+    if (!form.github_url.trim()) {
+      setSaveError('GitHub Profile URL is required to verify code artifacts.');
+      return;
+    }
+    if (!form.linkedin_url.trim()) {
+      setSaveError('LinkedIn Profile URL is required to verify career history.');
+      return;
+    }
+
+    try {
+      // 1. Update user name via /auth/me
+      if (firstName.trim() || lastName.trim()) {
+        await apiClient.patch('/auth/me', {
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+        });
+        await useAuthStore.getState().fetchUser();
+      }
+
+      // 2. Prepare Profile Payload
+      const payload: any = {
+        bio: form.bio,
+        location: form.location || form.preferred_location,
+        phone: form.phone,
+        linkedin_url: form.linkedin_url,
+        github_url: form.github_url,
+        portfolio_url: form.portfolio_url,
+        highest_degree: form.highest_degree,
+        current_major: form.current_major,
+        current_university: form.current_university,
+        career_goal_primary: form.career_goal_primary,
+        career_goal_secondary: form.career_goal_secondary,
+        preferred_industry: form.preferred_industry,
+        preferred_work_style: form.preferred_work_style,
+        willing_to_relocate: form.willing_to_relocate,
+      };
+
+      if (form.current_cgpa !== '') payload.current_cgpa = parseFloat(form.current_cgpa);
+      else payload.current_cgpa = null;
+
+      if (form.graduation_year !== '') payload.graduation_year = parseInt(form.graduation_year);
+      else payload.graduation_year = null;
+
+      Object.keys(payload).forEach(k => {
+        if (payload[k] === '') payload[k] = null;
+      });
+
+      await updateProfile(payload);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } catch (err: any) {
+      setSaveError(err.response?.data?.message || err.message || 'Failed to save evidence. Please check your inputs.');
+    }
+  };
+
+  const handleSkillSearch = useCallback(async (val: string) => {
+    setSkillSearch(val);
+    setSelectedSkill(null);
+    if (val.length >= 1) {
+      await searchSkillCatalog(val);
+    }
+  }, [searchSkillCatalog]);
+
+  const mapProficiencyToNumber = (p: string): number => {
+    switch (p) {
+      case 'Beginner': return 3;
+      case 'Intermediate': return 6;
+      case 'Advanced': return 8;
+      case 'Expert': return 10;
+      default: return 6;
+    }
+  };
+
+  const handleAddSkill = async () => {
+    if (!selectedSkill) { 
+      setSkillError('Select a skill from the catalog dropdown first.'); 
+      return; 
+    }
+    setSkillError('');
+    setAddingSkill(true);
+    try {
+      const sourceStr = selectedContexts.length > 0 ? selectedContexts.join(', ') : 'Personal Projects';
+      await addSkill(selectedSkill.id, mapProficiencyToNumber(proficiencyLevel), undefined);
+      
+      // Update skill source
+      try {
+        await apiClient.post('/skills', {
+          skill_id: selectedSkill.id,
+          proficiency_level: mapProficiencyToNumber(proficiencyLevel),
+          source: sourceStr,
+        });
+      } catch {
+        // Fallback handled by store
+      }
+
+      await fetchSkills();
+      setSelectedSkill(null);
+      setSkillSearch('');
+      setProficiencyLevel('Intermediate');
+      setSelectedContexts(['Personal Projects']);
+    } catch (e: any) {
+      setSkillError(e.message || 'Failed to add skill.');
+    } finally {
+      setAddingSkill(false);
+    }
+  };
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setResumeError('Please select a valid PDF file.');
+      return;
+    }
+
+    setUploadingResume(true);
+    setResumeError('');
+    setResumeSuccessBanner(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await apiClient.post('/profiles/upload-resume', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const extracted = res.data?.data?.extracted_fields || {};
+      const matchedSkills = res.data?.data?.matched_skills || [];
+
+      // 1. Pre-fill First & Last Name if detected
+      if (extracted.first_name) setFirstName(extracted.first_name);
+      if (extracted.last_name) setLastName(extracted.last_name);
+
+      // 2. Pre-fill Form Fields
+      setForm(prev => ({
+        ...prev,
+        phone: extracted.phone || prev.phone,
+        github_url: extracted.github_url || prev.github_url,
+        linkedin_url: extracted.linkedin_url || prev.linkedin_url,
+        portfolio_url: extracted.portfolio_url || prev.portfolio_url,
+        education_level: extracted.education_level || prev.education_level,
+        highest_degree: extracted.highest_degree || prev.highest_degree,
+        current_major: extracted.current_major || prev.current_major,
+        current_cgpa: extracted.current_cgpa ? extracted.current_cgpa.toString() : prev.current_cgpa,
+        graduation_year: extracted.graduation_year ? extracted.graduation_year.toString() : prev.graduation_year,
+      }));
+
+      // 3. Populate Matched Skills into User Profile
+      if (matchedSkills.length > 0) {
+        for (const sk of matchedSkills) {
+          try {
+            await apiClient.post('/skills', {
+              skill_id: sk.skill_id,
+              proficiency_level: sk.proficiency_level || 8,
+              source: sk.source || 'Personal Projects, Academic',
+            });
+          } catch {
+            // Ignore duplicate skill errors
+          }
+        }
+        await fetchSkills();
+      }
+
+      setResumeSuccessBanner(
+        `✨ Resume Parsed! Found ${matchedSkills.length} skills and pre-filled your profile fields. Please verify, add or adjust any details below, and click 'Save Evidence & Calibrate Twin'.`
+      );
+    } catch (err: any) {
+      setResumeError(err.response?.data?.detail || err.response?.data?.message || 'Failed to parse resume PDF.');
+    } finally {
+      setUploadingResume(false);
+      e.target.value = '';
+    }
+  };
 
   const handleDeleteAccount = async () => {
     setDeleteError('');
@@ -90,586 +394,855 @@ export default function Profile() {
     }
   };
 
-  // Skills sub-section state
-  const [skillSearch, setSkillSearch] = useState('');
-  const [selectedSkill, setSelectedSkill] = useState<SkillCatalogItem | null>(null);
-  const [proficiency, setProficiency] = useState(5);
-  const [yearsExp, setYearsExp] = useState('');
-  const [skillError, setSkillError] = useState('');
-  const [addingSkill, setAddingSkill] = useState(false);
+  const completeness = profile?.twin_completeness_score || 0;
+  const isComplete = completeness >= 0.8;
 
-  useEffect(() => {
-    fetchProfile();
-    fetchSkills();
-  }, [fetchProfile, fetchSkills]);
-
-  // Populate form when profile loads
-  useEffect(() => {
-    if (profile) {
-      setForm({
-        bio: profile.bio ?? '',
-        location: profile.location ?? '',
-        phone: profile.phone ?? '',
-        linkedin_url: profile.linkedin_url ?? '',
-        github_url: profile.github_url ?? '',
-        portfolio_url: profile.portfolio_url ?? '',
-        current_cgpa: profile.current_cgpa?.toString() ?? '',
-        highest_degree: profile.highest_degree ?? '',
-        current_major: profile.current_major ?? '',
-        current_university: profile.current_university ?? '',
-        graduation_year: profile.graduation_year?.toString() ?? '',
-        career_goal_primary: profile.career_goal_primary ?? '',
-        career_goal_secondary: profile.career_goal_secondary ?? '',
-        preferred_industry: profile.preferred_industry ?? '',
-        preferred_work_style: profile.preferred_work_style ?? '',
-        willing_to_relocate: profile.willing_to_relocate ?? false,
-      });
-    }
-  }, [profile]);
-
-  const handleField = (field: string, value: any) => {
-    setForm(f => ({ ...f, [field]: value }));
-  };
-
-  const handleSave = async () => {
-    setSaveError('');
-    setSaveSuccess(false);
-    try {
-      const payload: any = { ...form };
-      if (payload.current_cgpa !== '') payload.current_cgpa = parseFloat(payload.current_cgpa);
-      else payload.current_cgpa = null;
-      if (payload.graduation_year !== '') payload.graduation_year = parseInt(payload.graduation_year);
-      else payload.graduation_year = null;
-      // Clear empty strings → null
-      Object.keys(payload).forEach(k => {
-        if (payload[k] === '') payload[k] = null;
-      });
-      await updateProfile(payload);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch {
-      setSaveError('Failed to save. Check your inputs and try again.');
-    }
-  };
-
-  // Skill search debounce
-  const handleSkillSearch = useCallback(async (val: string) => {
-    setSkillSearch(val);
-    setSelectedSkill(null);
-    if (val.length >= 1) {
-      await searchSkillCatalog(val);
-    }
-  }, [searchSkillCatalog]);
-
-  const handleAddSkill = async () => {
-    if (!selectedSkill) { setSkillError('Select a skill from the catalog first.'); return; }
-    setSkillError('');
-    setAddingSkill(true);
-    try {
-      await addSkill(selectedSkill.id, proficiency, yearsExp ? parseFloat(yearsExp) : undefined);
-      setSelectedSkill(null);
-      setSkillSearch('');
-      setProficiency(5);
-      setYearsExp('');
-    } catch (e: any) {
-      setSkillError(e.message);
-    } finally {
-      setAddingSkill(false);
-    }
-  };
-
-  const [uploadingResume, setUploadingResume] = useState(false);
-  const [resumeSuccess, setResumeSuccess] = useState('');
-  const [resumeError, setResumeError] = useState('');
-
-  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.name.endsWith('.pdf')) {
-      setResumeError('Please select a valid PDF file.');
-      return;
-    }
-
-    setUploadingResume(true);
-    setResumeError('');
-    setResumeSuccess('');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await apiClient.post('/profiles/upload-resume', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      setResumeSuccess(res.data?.message || 'Resume parsed successfully!');
-      fetchProfile();
-      fetchSkills();
-    } catch (err: any) {
-      setResumeError(err?.response?.data?.detail || 'Failed to parse PDF resume.');
-    } finally {
-      setUploadingResume(false);
-    }
-  };
-
-  const completeness = profile?.twin_completeness_score ?? 0;
+  if (isLoading && !profile) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', flexDirection: 'column', gap: '1rem' }}>
+        <Loader2 size={32} className="spin" color="var(--accent-primary)" />
+        <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Loading Evidence & Digital Twin...</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="animate-fade-in">
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-xl)' }}>
+    <div style={{ maxWidth: '960px', margin: '0 auto', paddingBottom: '4rem' }}>
+      
+      {/* Executive Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h2>Twin Profile</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>
-            Fill in your details below or upload your PDF resume to auto-build your Digital Twin.
+          <h1 style={{ margin: '0 0 0.25rem 0', fontSize: '1.65rem', fontWeight: 700, letterSpacing: '-0.02em' }}>
+            Digital Twin Evidence Layer
+          </h1>
+          <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+            Every piece of evidence calibrates your 216-D vector space for accurate career trajectories and salary models.
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
-          {/* Completeness badge */}
-          <div style={{
-            background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)',
-            borderRadius: '12px', padding: '6px 16px',
-            color: 'var(--accent-blue)', fontWeight: 600, fontSize: '0.875rem',
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ 
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
+            background: 'var(--bg-surface)', padding: '0.45rem 0.85rem',
+            borderRadius: 'var(--radius-md)', border: 'var(--micro-border)'
           }}>
-            ⚡ Twin Completeness: {Math.round(completeness * 100)}%
+            <div style={{
+              width: '8px', height: '8px', borderRadius: '50%',
+              background: isComplete ? 'var(--success)' : 'var(--warning)',
+              boxShadow: `0 0 8px ${isComplete ? 'var(--success)' : 'var(--warning)'}`
+            }} />
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Fidelity: {Math.round(completeness * 100)}%
+            </span>
           </div>
-          <button
+
+          <button 
             className="btn btn-primary"
             onClick={handleSave}
             disabled={isSaving}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{ fontSize: '0.8125rem', padding: '0.45rem 1rem', gap: '0.4rem' }}
           >
-            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            {isSaving ? 'Saving…' : 'Save All'}
+            {isSaving ? <Loader2 size={14} className="spin" /> : <Save size={14} />}
+            <span>{isSaving ? 'Calibrating...' : 'Save Evidence & Calibrate'}</span>
           </button>
         </div>
       </div>
 
-      {/* PDF Resume Auto-Parser Hero Dropzone */}
-      <div className="card" style={{
-        marginBottom: 'var(--spacing-xl)',
-        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(59, 130, 246, 0.12))',
-        border: '1px dashed rgba(139, 92, 246, 0.4)',
-        padding: '1.5rem',
-        textAlign: 'center'
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ background: 'rgba(139, 92, 246, 0.2)', padding: '0.75rem', borderRadius: '50%', color: 'var(--accent-purple)' }}>
-            <Wrench size={24} />
-          </div>
-          <h3 style={{ margin: 0, fontSize: '1.15rem' }}>⚡ Fast Track: Auto-Build Twin from PDF Resume</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0, maxWidth: '550px' }}>
-            Upload your PDF resume (`.pdf`). Our AI Parser will extract your technical skills, experience, and major automatically!
-          </p>
+      {/* Global Status Notifications */}
+      {saveSuccess && (
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)',
+          color: 'var(--success)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
+          marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem'
+        }}>
+          <CheckCheck size={16} />
+          <span>Profile evidence saved and Digital Twin recalibrated successfully!</span>
+        </div>
+      )}
 
-          <label className="btn btn-secondary" style={{ marginTop: '0.5rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-            {uploadingResume ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-            {uploadingResume ? 'Parsing PDF Resume...' : 'Upload PDF Resume'}
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleResumeUpload}
-              disabled={uploadingResume}
-              style={{ display: 'none' }}
+      {saveError && (
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)',
+          color: 'var(--danger)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
+          marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem'
+        }}>
+          <AlertCircle size={16} />
+          <span>{saveError}</span>
+        </div>
+      )}
+
+      {resumeSuccessBanner && (
+        <div style={{
+          background: 'rgba(37, 99, 235, 0.12)', border: '1px solid rgba(37, 99, 235, 0.4)',
+          color: 'var(--text-primary)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)',
+          marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem', fontSize: '0.875rem',
+          boxShadow: '0 4px 20px rgba(37, 99, 235, 0.15)'
+        }}>
+          <CheckCircle size={18} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+          <div>
+            <span style={{ fontWeight: 600, display: 'block', marginBottom: '0.2rem', color: 'var(--accent-primary)' }}>
+              Resume Evidence Extracted
+            </span>
+            <span>{resumeSuccessBanner}</span>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Resume Ingestion Hero */}
+      <div 
+        className="card"
+        style={{
+          background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(17, 24, 39, 0.6) 100%)',
+          border: '1px dashed rgba(37, 99, 235, 0.35)',
+          padding: '1.5rem',
+          borderRadius: 'var(--radius-lg)',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1.25rem'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '280px' }}>
+          <div style={{
+            width: '48px', height: '48px', borderRadius: 'var(--radius-md)',
+            background: 'rgba(37, 99, 235, 0.1)', border: '1px solid rgba(37, 99, 235, 0.25)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          }}>
+            <UploadCloud size={24} color="var(--accent-primary)" />
+          </div>
+          <div>
+            <h3 style={{ margin: '0 0 0.2rem 0', fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Automated Resume Parser & Evidence Extractor
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+              Upload your PDF resume to auto-fill links, academic trajectory, and technical skills for your review.
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <label 
+            className="btn btn-primary"
+            style={{
+              cursor: uploadingResume ? 'not-allowed' : 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+              padding: '0.5rem 1.15rem', fontSize: '0.8125rem',
+            }}
+          >
+            {uploadingResume ? <Loader2 size={15} className="spin" /> : <UploadCloud size={15} />}
+            <span>{uploadingResume ? 'Extracting Evidence...' : 'Upload PDF Resume'}</span>
+            <input 
+              type="file" 
+              accept=".pdf" 
+              disabled={uploadingResume} 
+              onChange={handleResumeUpload} 
+              style={{ display: 'none' }} 
             />
           </label>
-
-          {resumeSuccess && (
-            <div style={{ color: 'var(--success)', fontSize: '0.85rem', fontWeight: 600, marginTop: '0.5rem' }}>
-              ✓ {resumeSuccess}
-            </div>
-          )}
-
-          {resumeError && (
-            <div style={{ color: 'var(--error)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-              {resumeError}
-            </div>
-          )}
         </div>
       </div>
 
-      {saveSuccess && (
+      {resumeError && (
         <div style={{
-          background: 'rgba(16,185,129,0.1)', border: '1px solid var(--success)',
-          color: 'var(--success)', padding: 'var(--spacing-sm) var(--spacing-md)',
-          borderRadius: 'var(--radius-sm)', marginBottom: 'var(--spacing-lg)',
-          display: 'flex', alignItems: 'center', gap: '0.5rem',
+          background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)',
+          color: 'var(--danger)', padding: '0.65rem 1rem', borderRadius: 'var(--radius-md)',
+          marginBottom: '1.25rem', fontSize: '0.8125rem'
         }}>
-          <CheckCircle size={16} /> Profile saved successfully!
-        </div>
-      )}
-      {(saveError || error) && (
-        <div style={{
-          background: 'rgba(239,68,68,0.1)', border: '1px solid var(--error)',
-          color: 'var(--error)', padding: 'var(--spacing-sm) var(--spacing-md)',
-          borderRadius: 'var(--radius-sm)', marginBottom: 'var(--spacing-lg)',
-        }}>
-          {saveError || error}
+          {resumeError}
         </div>
       )}
 
-      {isLoading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-          <Loader2 className="animate-spin" size={32} />
+      {/* SECTION 1: PROFESSIONAL IDENTITY */}
+      <Section title="1. Professional Identity" icon={<User size={18} color="var(--accent-primary)" />} badge="Required Links">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          
+          {/* First Name */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              First Name *
+            </label>
+            <input 
+              type="text" 
+              className="input-field" 
+              placeholder="e.g. Alex" 
+              value={firstName} 
+              onChange={e => setFirstName(e.target.value)} 
+            />
+          </div>
+
+          {/* Last Name */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Last Name *
+            </label>
+            <input 
+              type="text" 
+              className="input-field" 
+              placeholder="e.g. Morgan" 
+              value={lastName} 
+              onChange={e => setLastName(e.target.value)} 
+            />
+          </div>
+
+          {/* Location */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Current Location
+            </label>
+            <input 
+              type="text" 
+              className="input-field" 
+              placeholder="e.g. Hyderabad, India" 
+              value={form.location} 
+              onChange={e => handleField('location', e.target.value)} 
+            />
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Phone Number
+            </label>
+            <input 
+              type="text" 
+              className="input-field" 
+              placeholder="e.g. +91 98765 43210" 
+              value={form.phone} 
+              onChange={e => handleField('phone', e.target.value)} 
+            />
+          </div>
+
         </div>
-      ) : (
-        <>
-          {/* ── Personal Info ── */}
-          <Section title="Personal Information" icon={<User size={20} color="var(--accent-blue)" />}>
-            <div className="grid grid-cols-2 gap-lg">
-              <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                <label className="input-label">Bio / About You</label>
-                <textarea
-                  className="input-field"
-                  rows={3}
-                  value={form.bio}
-                  onChange={e => handleField('bio', e.target.value)}
-                  placeholder="Tell us about yourself, your aspirations and background…"
-                  style={{ resize: 'vertical' }}
-                />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Location</label>
-                <input className="input-field" value={form.location} onChange={e => handleField('location', e.target.value)} placeholder="City, Country" />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Phone</label>
-                <input className="input-field" value={form.phone} onChange={e => handleField('phone', e.target.value)} placeholder="+1 234 567 8900" />
-              </div>
-              <div className="input-group">
-                <label className="input-label">LinkedIn URL</label>
-                <input className="input-field" value={form.linkedin_url} onChange={e => handleField('linkedin_url', e.target.value)} placeholder="https://linkedin.com/in/you" />
-              </div>
-              <div className="input-group">
-                <label className="input-label">GitHub URL</label>
-                <input className="input-field" value={form.github_url} onChange={e => handleField('github_url', e.target.value)} placeholder="https://github.com/you" />
-              </div>
-              <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                <label className="input-label">Portfolio URL</label>
-                <input className="input-field" value={form.portfolio_url} onChange={e => handleField('portfolio_url', e.target.value)} placeholder="https://yourportfolio.com" />
-              </div>
-            </div>
-          </Section>
 
-          {/* ── Academics ── */}
-          <Section title="Academic History" icon={<GraduationCap size={20} color="var(--accent-teal)" />}>
-            <div className="grid grid-cols-2 gap-lg">
-              <div className="input-group">
-                <label className="input-label">Highest Degree</label>
-                <select className="input-field" value={form.highest_degree} onChange={e => handleField('highest_degree', e.target.value)}>
-                  <option value="">Select degree…</option>
-                  <option>High School</option>
-                  <option>Associate's</option>
-                  <option>Bachelor's</option>
-                  <option>Master's</option>
-                  <option>PhD / Doctoral</option>
-                  <option>Diploma</option>
-                </select>
-              </div>
-              <div className="input-group">
-                <label className="input-label">Current Major / Field of Study</label>
-                <input className="input-field" value={form.current_major} onChange={e => handleField('current_major', e.target.value)} placeholder="Computer Science" />
-              </div>
-              <div className="input-group">
-                <label className="input-label">University / Institution</label>
-                <input className="input-field" value={form.current_university} onChange={e => handleField('current_university', e.target.value)} placeholder="MIT, IIT, etc." />
-              </div>
-              <div className="input-group">
-                <label className="input-label">CGPA / GPA (0–10)</label>
-                <input
-                  type="number" step="0.01" min="0" max="10"
-                  className="input-field" value={form.current_cgpa}
-                  onChange={e => handleField('current_cgpa', e.target.value)}
-                  placeholder="8.5"
-                />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Expected Graduation Year</label>
-                <input
-                  type="number" min="2000" max="2040"
-                  className="input-field" value={form.graduation_year}
-                  onChange={e => handleField('graduation_year', e.target.value)}
-                  placeholder="2026"
-                />
-              </div>
-            </div>
-          </Section>
+        {/* Bio */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Professional Summary & Research Focus
+          </label>
+          <textarea 
+            className="input-field" 
+            rows={3}
+            placeholder="Describe your engineering domain, technical interests, and focus areas..." 
+            value={form.bio} 
+            onChange={e => handleField('bio', e.target.value)} 
+            style={{ resize: 'vertical' }}
+          />
+        </div>
 
-          {/* ── Career Goals ── */}
-          <Section title="Career Goals & Preferences" icon={<Target size={20} color="var(--accent-purple)" />}>
-            <div className="grid grid-cols-2 gap-lg">
-              <div className="input-group">
-                <label className="input-label">Primary Career Goal</label>
-                <input className="input-field" value={form.career_goal_primary} onChange={e => handleField('career_goal_primary', e.target.value)} placeholder="Software Engineer, Data Scientist…" />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Secondary Career Goal</label>
-                <input className="input-field" value={form.career_goal_secondary} onChange={e => handleField('career_goal_secondary', e.target.value)} placeholder="Product Manager, ML Researcher…" />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Preferred Industry</label>
-                <select className="input-field" value={form.preferred_industry} onChange={e => handleField('preferred_industry', e.target.value)}>
-                  <option value="">Select industry…</option>
-                  <option>Technology</option>
-                  <option>Finance</option>
-                  <option>Healthcare</option>
-                  <option>Education</option>
-                  <option>E-Commerce</option>
-                  <option>Manufacturing</option>
-                  <option>Media & Entertainment</option>
-                  <option>Government</option>
-                  <option>Research & Academia</option>
-                  <option>Startup / Entrepreneurship</option>
-                </select>
-              </div>
-              <div className="input-group">
-                <label className="input-label">Preferred Work Style</label>
-                <select className="input-field" value={form.preferred_work_style} onChange={e => handleField('preferred_work_style', e.target.value)}>
-                  <option value="">Select style…</option>
-                  <option value="remote">Remote</option>
-                  <option value="hybrid">Hybrid</option>
-                  <option value="onsite">On-Site</option>
-                  <option value="flexible">Flexible</option>
-                </select>
-              </div>
-              <div className="input-group" style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', gridColumn: 'span 2' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
-                  <input
-                    type="checkbox"
-                    checked={form.willing_to_relocate}
-                    onChange={e => handleField('willing_to_relocate', e.target.checked)}
-                    style={{ width: '18px', height: '18px', accentColor: 'var(--accent-blue)' }}
-                  />
-                  <span style={{ fontWeight: 500 }}>Willing to Relocate</span>
+        {/* Verified Link Collection Bar */}
+        <div style={{ background: 'var(--bg-elevated)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: 'var(--micro-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <Globe size={15} color="var(--accent-primary)" />
+            <h4 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Professional Links & Evidence Verification
+            </h4>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            {/* GitHub URL (Required) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg>
+                  <span>GitHub Profile URL *</span>
                 </label>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                  Checking this opens more career opportunities in other cities/countries.
+                <span title="Verifies technical skills, projects, and coding frequency for salary predictions." style={{ cursor: 'help', color: 'var(--accent-primary)' }}>
+                  <HelpCircle size={13} />
                 </span>
               </div>
+              <input 
+                type="url" 
+                className="input-field" 
+                placeholder="https://github.com/your-handle" 
+                value={form.github_url} 
+                onChange={e => handleField('github_url', e.target.value)} 
+                required
+              />
+              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
+                Powers repo analysis, tech stack detection, and project quality scoring.
+              </span>
             </div>
-          </Section>
 
-          {/* ── Skills Manager ── */}
-          <Section title="Skills" icon={<Wrench size={20} color="var(--success)" />}>
-            {/* Add Skill Form */}
-            <div style={{
-              background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)',
-              padding: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: 'var(--spacing-md)' }}>
-                Search the skill catalog and add skills with your proficiency level.
-              </p>
-              <div style={{ display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div className="input-group" style={{ flex: '2 1 200px', position: 'relative' }}>
+            {/* LinkedIn URL (Required) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect width="4" height="12" x="2" y="9"></rect><circle cx="4" cy="4" r="2"></circle></svg>
+                  <span>LinkedIn Profile URL *</span>
+                </label>
+                <span title="Extracts professional tenure, certifications, and career trajectories." style={{ cursor: 'help', color: 'var(--accent-primary)' }}>
+                  <HelpCircle size={13} />
+                </span>
+              </div>
+              <input 
+                type="url" 
+                className="input-field" 
+                placeholder="https://linkedin.com/in/your-handle" 
+                value={form.linkedin_url} 
+                onChange={e => handleField('linkedin_url', e.target.value)} 
+                required
+              />
+              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
+                Validates work history, internships, and increases Digital Twin confidence.
+              </span>
+            </div>
+          </div>
 
-                  <label className="input-label">Search Skill Catalog</label>
-                  <div style={{ position: 'relative' }}>
-                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input
-                      className="input-field"
-                      style={{ paddingLeft: '36px' }}
-                      value={skillSearch}
-                      onChange={e => handleSkillSearch(e.target.value)}
-                      placeholder="Type to search: Python, React, SQL…"
-                    />
-                  </div>
-                  {/* Dropdown results */}
-                  {skillCatalog.length > 0 && skillSearch && !selectedSkill && (
-                    <div style={{
-                      position: 'absolute', zIndex: 50, background: 'var(--bg-surface)',
-                      border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-sm)',
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.4)', maxHeight: '200px', overflowY: 'auto',
-                      width: '100%', marginTop: '4px',
-                    }}>
-                      {skillCatalog.map(s => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => { setSelectedSkill(s); setSkillSearch(s.name); }}
-                          style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            width: '100%', padding: '10px 14px', background: 'none',
-                            border: 'none', cursor: 'pointer', color: 'var(--text-primary)',
-                            textAlign: 'left', fontSize: '0.875rem',
-                          }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-elevated)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                        >
-                          <span>{s.name}</span>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{s.category}</span>
-                        </button>
-                      ))}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            {/* Portfolio Website (Optional) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Portfolio / Personal Website <span style={{ opacity: 0.6 }}>(Optional)</span>
+                </label>
+                <span title="Evaluates portfolio architecture and personal project showcase." style={{ cursor: 'help', color: 'var(--text-muted)' }}>
+                  <HelpCircle size={13} />
+                </span>
+              </div>
+              <input 
+                type="url" 
+                className="input-field" 
+                placeholder="https://yourportfolio.dev" 
+                value={form.portfolio_url} 
+                onChange={e => handleField('portfolio_url', e.target.value)} 
+              />
+            </div>
+
+            {/* Coding Platform Profile (Optional) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <Code2 size={12} />
+                  <span>Coding Platform <span style={{ opacity: 0.6 }}>(Choose 1)</span></span>
+                </label>
+                <span title="Analyzes problem solving consistency and SWE readiness." style={{ cursor: 'help', color: 'var(--text-muted)' }}>
+                  <HelpCircle size={13} />
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <select 
+                  className="input-field" 
+                  value={form.coding_platform} 
+                  onChange={e => handleField('coding_platform', e.target.value)}
+                  style={{ width: '130px', flexShrink: 0 }}
+                >
+                  <option value="LeetCode">LeetCode</option>
+                  <option value="HackerRank">HackerRank</option>
+                  <option value="CodeChef">CodeChef</option>
+                  <option value="Codeforces">Codeforces</option>
+                  <option value="AtCoder">AtCoder</option>
+                </select>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  placeholder="Username or profile URL" 
+                  value={form.coding_url} 
+                  onChange={e => handleField('coding_url', e.target.value)} 
+                />
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </Section>
+
+      {/* SECTION 2: ACADEMIC PROFILE (DEPENDENT DROPDOWNS) */}
+      <Section title="2. Academic Profile" icon={<GraduationCap size={18} color="var(--accent-primary)" />} badge="Dependent Taxonomy">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          
+          {/* Step 1: Highest Education Level */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Step 1: Highest Education Level *
+            </label>
+            <select 
+              className="input-field" 
+              value={form.education_level} 
+              onChange={e => handleField('education_level', e.target.value)}
+            >
+              <option value="High School">High School</option>
+              <option value="Diploma">Diploma</option>
+              <option value="Undergraduate">Undergraduate</option>
+              <option value="Postgraduate">Postgraduate</option>
+              <option value="PhD">PhD</option>
+            </select>
+          </div>
+
+          {/* Step 2: Dependent Degree Options */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Step 2: Degree Program *
+            </label>
+            <select 
+              className="input-field" 
+              value={form.highest_degree} 
+              onChange={e => handleField('highest_degree', e.target.value)}
+            >
+              {(DEGREE_OPTIONS_BY_LEVEL[form.education_level] || []).map(deg => (
+                <option key={deg} value={deg}>{deg}</option>
+              ))}
+            </select>
+          </div>
+
+        </div>
+
+        {/* Step 3: Branch, Institution, CGPA, Grad Year */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Major / Branch of Study *
+            </label>
+            <input 
+              type="text" 
+              className="input-field" 
+              placeholder="e.g. Computer Science and Engineering" 
+              value={form.current_major} 
+              onChange={e => handleField('current_major', e.target.value)} 
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              University / Institution *
+            </label>
+            <input 
+              type="text" 
+              className="input-field" 
+              placeholder="e.g. Indian Institute of Technology" 
+              value={form.current_university} 
+              onChange={e => handleField('current_university', e.target.value)} 
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Cumulative CGPA / GPA (Scale of 10)
+            </label>
+            <input 
+              type="number" 
+              step="0.01" 
+              min="0" 
+              max="10" 
+              className="input-field" 
+              placeholder="e.g. 8.75" 
+              value={form.current_cgpa} 
+              onChange={e => handleField('current_cgpa', e.target.value)} 
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Graduation Year
+            </label>
+            <input 
+              type="number" 
+              min="1950" 
+              max="2035" 
+              className="input-field" 
+              placeholder="e.g. 2026" 
+              value={form.graduation_year} 
+              onChange={e => handleField('graduation_year', e.target.value)} 
+            />
+          </div>
+
+        </div>
+      </Section>
+
+      {/* SECTION 3: CAREER INTENT */}
+      <Section title="3. Career Intent" icon={<Target size={18} color="var(--accent-primary)" />} badge="Trajectory Vectoring">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Primary Career Goal *
+            </label>
+            <input 
+              type="text" 
+              className="input-field" 
+              placeholder="e.g. AI Systems Engineer" 
+              value={form.career_goal_primary} 
+              onChange={e => handleField('career_goal_primary', e.target.value)} 
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Secondary Career Goal
+            </label>
+            <input 
+              type="text" 
+              className="input-field" 
+              placeholder="e.g. Site Reliability Engineer" 
+              value={form.career_goal_secondary} 
+              onChange={e => handleField('career_goal_secondary', e.target.value)} 
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Preferred Industry
+            </label>
+            <input 
+              type="text" 
+              className="input-field" 
+              placeholder="e.g. Artificial Intelligence, FinTech, SaaS" 
+              value={form.preferred_industry} 
+              onChange={e => handleField('preferred_industry', e.target.value)} 
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Preferred Company Type
+            </label>
+            <select 
+              className="input-field" 
+              value={form.company_type} 
+              onChange={e => handleField('company_type', e.target.value)}
+            >
+              <option value="Startup">Startup</option>
+              <option value="Product Company">Product Company</option>
+              <option value="Service Company">Service Company</option>
+              <option value="Research">Research & Labs</option>
+              <option value="Government">Government & Defense</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Preferred Work Mode
+            </label>
+            <select 
+              className="input-field" 
+              value={form.preferred_work_style} 
+              onChange={e => handleField('preferred_work_style', e.target.value)}
+            >
+              <option value="Remote">Remote</option>
+              <option value="Hybrid">Hybrid</option>
+              <option value="On-site">On-site</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Preferred Team Size
+            </label>
+            <select 
+              className="input-field" 
+              value={form.preferred_team_size} 
+              onChange={e => handleField('preferred_team_size', e.target.value)}
+            >
+              <option value="Small (1-10)">Small (1-10)</option>
+              <option value="Medium (11-50)">Medium (11-50)</option>
+              <option value="Large (50+)">Large (50+)</option>
+            </select>
+          </div>
+
+        </div>
+
+        {/* Relocation Checkbox */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginTop: '0.5rem' }}>
+          <input 
+            type="checkbox" 
+            id="relocateCheck"
+            checked={form.willing_to_relocate} 
+            onChange={e => handleField('willing_to_relocate', e.target.checked)} 
+            style={{ width: '16px', height: '16px', accentColor: 'var(--accent-primary)' }}
+          />
+          <label htmlFor="relocateCheck" style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', cursor: 'pointer' }}>
+            Open to domestic and international relocation for optimal career trajectories.
+          </label>
+        </div>
+      </Section>
+
+      {/* SECTION 4: SKILL INTELLIGENCE */}
+      <Section title="4. Skill Intelligence" icon={<Wrench size={18} color="var(--accent-primary)" />} badge={`${skills.length} Verified`}>
+        
+        {/* Add Skill Builder */}
+        <div style={{ background: 'var(--bg-elevated)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: 'var(--micro-border)', marginBottom: '1.25rem' }}>
+          <h4 style={{ margin: '0 0 0.85rem 0', fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            Add Skill with Verified Application Evidence
+          </h4>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            
+            {/* Search Dropdown */}
+            <div style={{ position: 'relative' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Search Skill Catalog *
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '11px', color: 'var(--text-muted)' }} />
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  style={{ paddingLeft: '32px' }}
+                  placeholder="e.g. Python, Docker, PyTorch, Kubernetes..." 
+                  value={skillSearch} 
+                  onChange={e => handleSkillSearch(e.target.value)} 
+                />
+              </div>
+
+              {/* Autocomplete Dropdown */}
+              {skillCatalog.length > 0 && skillSearch.length >= 1 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                  background: 'var(--bg-surface)', border: 'var(--micro-border)',
+                  borderRadius: 'var(--radius-md)', maxHeight: '180px', overflowY: 'auto',
+                  marginTop: '4px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+                }}>
+                  {skillCatalog.map(sk => (
+                    <div 
+                      key={sk.id}
+                      onClick={() => { setSelectedSkill(sk); setSkillSearch(sk.name); }}
+                      style={{
+                        padding: '0.6rem 0.85rem', cursor: 'pointer', fontSize: '0.8125rem',
+                        borderBottom: 'var(--micro-border)', display: 'flex', justifyContent: 'space-between',
+                        background: selectedSkill?.id === sk.id ? 'rgba(37, 99, 235, 0.15)' : 'transparent'
+                      }}
+                    >
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{sk.name}</span>
+                      <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{sk.category}</span>
                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Proficiency Dropdown */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Proficiency Level *
+              </label>
+              <select 
+                className="input-field" 
+                value={proficiencyLevel} 
+                onChange={e => setProficiencyLevel(e.target.value as any)}
+              >
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+                <option value="Expert">Expert</option>
+              </select>
+            </div>
+
+          </div>
+
+          {/* Where have you used this skill? Checkboxes */}
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Where have you applied this skill? (Evidence Collection) *
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              {APPLICATION_CONTEXTS.map(ctx => {
+                const isSelected = selectedContexts.includes(ctx);
+                return (
+                  <button
+                    key={ctx}
+                    type="button"
+                    onClick={() => toggleContext(ctx)}
+                    style={{
+                      padding: '0.35rem 0.65rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      background: isSelected ? 'rgba(37, 99, 235, 0.2)' : 'var(--bg-surface)',
+                      color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      border: isSelected ? '1px solid rgba(37, 99, 235, 0.5)' : 'var(--micro-border)',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {isSelected ? '✓ ' : '+ '}{ctx}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {skillError && (
+            <p style={{ color: 'var(--danger)', fontSize: '0.75rem', margin: '0 0 0.75rem 0' }}>
+              {skillError}
+            </p>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button 
+              type="button"
+              className="btn btn-primary"
+              onClick={handleAddSkill}
+              disabled={addingSkill}
+              style={{ fontSize: '0.8125rem', padding: '0.4rem 0.85rem', gap: '0.35rem' }}
+            >
+              {addingSkill ? <Loader2 size={13} className="spin" /> : <Plus size={13} />}
+              <span>Add to Intelligence Inventory</span>
+            </button>
+          </div>
+
+        </div>
+
+        {/* Existing Skills List */}
+        {isLoadingSkills ? (
+          <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
+            <Loader2 size={20} className="spin" />
+          </div>
+        ) : skills.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', textAlign: 'center', margin: '1rem 0' }}>
+            No skills added yet. Upload your resume or search the catalog above to populate skill vectors.
+          </p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
+            {skills.map(us => (
+              <div 
+                key={us.id}
+                style={{
+                  background: 'var(--bg-elevated)', padding: '0.85rem 1rem',
+                  borderRadius: 'var(--radius-md)', border: 'var(--micro-border)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)' }}>
+                      {us.skill?.name || 'Skill'}
+                    </span>
+                    <span style={{
+                      fontSize: '0.6875rem', fontWeight: 600, padding: '0.1rem 0.4rem',
+                      borderRadius: 'var(--radius-sm)', background: 'rgba(37, 99, 235, 0.15)', color: 'var(--accent-primary)'
+                    }}>
+                      Level {us.proficiency_level}/10
+                    </span>
+                  </div>
+                  {us.source && (
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'block' }}>
+                      Context: {us.source}
+                    </span>
                   )}
                 </div>
 
-                <div className="input-group" style={{ flex: '1 1 140px' }}>
-                  <label className="input-label">Proficiency: {proficiency} — {profLabel(proficiency)}</label>
-                  <input
-                    type="range" min="1" max="10" value={proficiency}
-                    onChange={e => setProficiency(parseInt(e.target.value))}
-                    style={{ width: '100%', accentColor: 'var(--accent-blue)' }}
-                  />
-                </div>
-
-                <div className="input-group" style={{ flex: '1 1 100px' }}>
-                  <label className="input-label">Years Exp.</label>
-                  <input
-                    type="number" min="0" step="0.5" className="input-field"
-                    value={yearsExp} onChange={e => setYearsExp(e.target.value)}
-                    placeholder="e.g. 2"
-                  />
-                </div>
-
-                <button
-                  type="button" className="btn btn-primary"
-                  onClick={handleAddSkill} disabled={!selectedSkill || addingSkill}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', alignSelf: 'flex-end' }}
-                >
-                  {addingSkill ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                  Add Skill
-                </button>
-              </div>
-              {skillError && <p style={{ color: 'var(--error)', fontSize: '0.8rem', marginTop: '8px' }}>{skillError}</p>}
-            </div>
-
-            {/* Skills List */}
-            {isLoadingSkills ? (
-              <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>
-                <Loader2 className="animate-spin" size={24} />
-              </div>
-            ) : skills.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem 0' }}>
-                No skills added yet. Search above to add your first skill.
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
-                {skills.map(s => (
-                  <div key={s.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)',
-                    padding: '12px 16px', background: 'var(--bg-elevated)',
-                    borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.05)',
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <span style={{ fontWeight: 600 }}>{s.skill.name}</span>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginLeft: '8px' }}>{s.skill.category}</span>
-                    </div>
-                    {/* Proficiency bar */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '80px', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>
-                        <div style={{
-                          width: `${(s.proficiency_level / 10) * 100}%`,
-                          height: '100%', borderRadius: '3px',
-                          background: s.proficiency_level >= 7 ? 'var(--success)' : s.proficiency_level >= 4 ? 'var(--accent-blue)' : 'var(--warning)',
-                        }} />
-                      </div>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', minWidth: '80px' }}>
-                        {s.proficiency_level}/10 · {profLabel(s.proficiency_level)}
-                      </span>
-                    </div>
-                    {s.years_experience && (
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{s.years_experience}yr</span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => removeSkill(s.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--error)', opacity: 0.6, padding: '4px' }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
-                      title="Remove skill"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Section>
-
-          {/* ── Certifications hint ── */}
-          <Section title="Certifications & Projects" icon={<Award size={20} color="var(--warning)" />}>
-            <div style={{ padding: 'var(--spacing-md)', textAlign: 'center', color: 'var(--text-muted)' }}>
-              <p style={{ marginBottom: 'var(--spacing-md)' }}>
-                Coming soon — add your certifications and project portfolio to boost your Twin Completeness score further.
-              </p>
-              <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>
-                Back to Dashboard
-              </button>
-            </div>
-          </Section>
-
-          {/* ── Danger Zone: Delete Account ── */}
-          <Section title="Account Settings & Danger Zone" icon={<Trash2 size={20} color="var(--error)" />}>
-            <div style={{ padding: 'var(--spacing-xs)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
-                Deleting your account will permanently remove your profile, career vectors, preferences, and all associated digital twin data. This action cannot be undone.
-              </p>
-              <div>
-                <button
+                <button 
                   type="button"
-                  className="btn"
-                  onClick={() => setShowDeleteModal(true)}
+                  onClick={() => removeSkill(us.id)}
                   style={{
-                    background: 'rgba(239, 68, 68, 0.12)',
-                    border: '1px solid rgba(239, 68, 68, 0.4)',
-                    color: 'var(--error)',
-                    fontWeight: 600,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--text-muted)', padding: '0.2rem', transition: 'color 0.15s ease'
                   }}
+                  title="Remove Skill"
                 >
-                  <Trash2 size={16} />
-                  Delete My Account
+                  <Trash2 size={14} />
                 </button>
               </div>
-            </div>
-          </Section>
-
-          {/* Bottom save */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
-            <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>
-              Cancel
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleSave}
-              disabled={isSaving}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              {isSaving ? 'Saving…' : 'Save Profile'}
-            </button>
+            ))}
           </div>
-        </>
-      )}
+        )}
+      </Section>
 
-      {/* Delete Account Modal */}
+      {/* Danger Zone: Account Deletion */}
+      <div 
+        className="card"
+        style={{
+          background: 'rgba(239, 68, 68, 0.03)',
+          border: '1px solid rgba(239, 68, 68, 0.2)',
+          padding: '1.25rem 1.5rem',
+          borderRadius: 'var(--radius-md)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}
+      >
+        <div>
+          <h4 style={{ margin: '0 0 0.2rem 0', color: 'var(--danger)', fontSize: '0.9375rem', fontWeight: 700 }}>
+            Danger Zone — Delete Account
+          </h4>
+          <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
+            Permanently delete your profile, Digital Twin embeddings, and all simulation records.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowDeleteModal(true)}
+          style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            color: 'var(--danger)',
+            padding: '0.45rem 0.9rem',
+            borderRadius: 'var(--radius-md)',
+            fontWeight: 600,
+            fontSize: '0.8125rem',
+            cursor: 'pointer',
+          }}
+        >
+          Delete Account
+        </button>
+      </div>
+
+      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(9, 13, 22, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card" style={{ width: '420px', border: '1px solid var(--error)', textAlign: 'center', padding: '2rem' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
-              <Trash2 size={24} color="var(--error)" />
-            </div>
-            <h3 style={{ color: 'var(--error)', marginBottom: '0.5rem' }}>Delete Account Permanently?</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-              Are you sure you want to delete your account? All your digital twin vectors, skills, and settings will be permanently removed.
+        <div 
+          className="modal-overlay"
+          onClick={() => setShowDeleteModal(false)}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.8)', zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px', backdropFilter: 'blur(8px)'
+          }}
+        >
+          <div 
+            className="card"
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: '420px', width: '100%', padding: '1.5rem',
+              background: 'var(--bg-surface)', border: '1px solid rgba(239, 68, 68, 0.4)',
+              borderRadius: 'var(--radius-lg)', boxShadow: '0 20px 50px rgba(0,0,0,0.8)'
+            }}
+          >
+            <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--danger)', fontSize: '1.15rem', fontWeight: 700 }}>
+              Confirm Account Deletion
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              Are you sure you want to permanently delete your account? This action cannot be undone and will erase all Digital Twin representations.
             </p>
+
             {deleteError && (
-              <p style={{ color: 'var(--error)', fontSize: '0.8125rem', marginBottom: '1rem' }}>{deleteError}</p>
+              <p style={{ color: 'var(--danger)', fontSize: '0.8125rem', marginBottom: '1rem' }}>
+                {deleteError}
+              </p>
             )}
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowDeleteModal(false)} disabled={isDeletingAccount}>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeletingAccount}
+                style={{ fontSize: '0.8125rem' }}
+              >
                 Cancel
               </button>
-              <button type="button" className="btn" style={{ flex: 1, background: 'var(--error)', color: 'white', fontWeight: 600 }} onClick={handleDeleteAccount} disabled={isDeletingAccount}>
-                {isDeletingAccount ? 'Deleting...' : 'Yes, Delete Account'}
+              <button 
+                onClick={handleDeleteAccount}
+                disabled={isDeletingAccount}
+                style={{
+                  background: 'var(--danger)', border: 'none', color: '#fff',
+                  padding: '0.45rem 0.9rem', borderRadius: 'var(--radius-md)',
+                  fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '0.4rem'
+                }}
+              >
+                {isDeletingAccount ? <Loader2 size={13} className="spin" /> : <Trash2 size={13} />}
+                <span>{isDeletingAccount ? 'Deleting...' : 'Confirm Deletion'}</span>
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -35,7 +35,7 @@ from app.core.constants import (
     TITLE_MAX_LENGTH,
     URL_MAX_LENGTH,
 )
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.base import Base, GUID, TimestampMixin, UUIDMixin
 
 
 class StudentProfile(UUIDMixin, TimestampMixin, Base):
@@ -50,7 +50,7 @@ class StudentProfile(UUIDMixin, TimestampMixin, Base):
 
     # ── User Link ──────────────────────────────────────────────
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         unique=True,
         nullable=False,

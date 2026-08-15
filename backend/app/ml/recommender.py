@@ -169,13 +169,14 @@ class RecommendationEngine:
         career_ids = []
         career_metadata = []
 
-        for career in careers:
+        for idx, career in enumerate(careers):
             vector = self._career_to_vector(career)
             vectors.append(vector)
-            career_ids.append(str(career.get("id", "")))
+            cid = str(career.get("id") or uuid.uuid5(uuid.NAMESPACE_DNS, career.get("title", f"career_{idx}")))
+            career_ids.append(cid)
 
             # Store metadata + vector for explainability
-            meta = {**career}
+            meta = {**career, "id": cid}
             meta["_vector"] = vector.tolist()
             career_metadata.append(meta)
 

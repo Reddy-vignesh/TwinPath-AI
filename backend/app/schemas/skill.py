@@ -75,7 +75,7 @@ class UserSkillRead(BaseModel):
     """User skill response (includes skill details)."""
 
     id: UUID
-    skill: SkillRead
+    skill: SkillRead | None = None
     proficiency_level: int
     years_experience: float | None = None
     is_primary: bool = False

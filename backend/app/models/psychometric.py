@@ -15,7 +15,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.constants import AssessmentType
-from app.models.base import Base, UUIDMixin
+from app.models.base import Base, PortableJSON, UUIDMixin
 
 
 class PsychometricAssessment(UUIDMixin, Base):
@@ -29,7 +29,6 @@ class PsychometricAssessment(UUIDMixin, Base):
     __tablename__ = "psychometric_assessments"
 
     profile_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
         ForeignKey("student_profiles.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -75,7 +74,7 @@ class PsychometricAssessment(UUIDMixin, Base):
 
     # ── Extended Results ───────────────────────────────────────
     raw_results: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True
+        PortableJSON, nullable=True
     )
 
     assessed_at: Mapped[datetime] = mapped_column(

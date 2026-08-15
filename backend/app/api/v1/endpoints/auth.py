@@ -13,20 +13,44 @@ from app.schemas.auth import ResetPasswordRequest, VerifyOTPRequest, SendOTPRequ
 from app.core.disposable_email import is_disposable_email
 
 from typing import Any
-
 import structlog
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
+from app.core.exceptions import UnauthorizedException
 from app.core.response import success_response
 from app.core.security import TokenPayload, get_current_user
 from app.db.session import get_db
 from app.repositories.user_repository import RefreshTokenRepository, UserRepository
 from app.schemas.auth import LoginRequest, RefreshTokenRequest, RegisterRequest, GuestLoginRequest
 from app.schemas.google_auth import GoogleLoginRequest
-from app.schemas.user import UserRead
+from app.schemas.user import UserRead, UserUpdate
 from app.services.auth_service import AuthService
+
+
+def _set_refresh_cookie(response: Response, refresh_token: str, is_production: bool) -> None:
+    """Sets a secure httpOnly cookie for the long-lived refresh token (Option C: Zero Cons)."""
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=is_production,
+        samesite="lax",
+        max_age=7 * 86400,  # 7 days
+        path="/api/v1/auth",
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    """Clears the refresh token httpOnly cookie upon logout."""
+    response.delete_cookie(
+        key="refresh_token",
+        path="/api/v1/auth",
+        httponly=True,
+        samesite="lax",
+    )
+
 
 # ── OTP-Specific Rate Limiter ─────────────────────────────────────
 # Prevents brute-force of 6-digit OTP codes (1M combinations)
@@ -92,6 +116,8 @@ def _get_auth_service(
 )
 async def google_login(
     payload: GoogleLoginRequest,
+    response: Response,
+    settings: Settings = Depends(get_settings),
     auth_service: AuthService = Depends(_get_auth_service),
 ) -> dict[str, Any]:
     """1-Click Google OAuth authentication with real token verification."""
@@ -109,10 +135,10 @@ async def google_login(
             # Call Google's tokeninfo endpoint to verify the access token
             tokeninfo_url = f"https://www.googleapis.com/oauth2/v3/tokeninfo?access_token={payload.credential}"
             async with httpx.AsyncClient() as client:
-                response = await client.get(tokeninfo_url, timeout=10)
+                response_google = await client.get(tokeninfo_url, timeout=10)
                 
-            if response.status_code == 200:
-                token_data = response.json()
+            if response_google.status_code == 200:
+                token_data = response_google.json()
                 # Verify that the token was issued for our app
                 if token_data.get("aud") == CLIENT_ID:
                     # Token is valid, we can trust the frontend email
@@ -120,7 +146,7 @@ async def google_login(
                 else:
                     logger.warning("Google token audience mismatch", expected=CLIENT_ID, got=token_data.get("aud"))
             else:
-                logger.warning("Google token verification failed", status=response.status_code, error=response.text)
+                logger.warning("Google token verification failed", status=response_google.status_code, error=response_google.text)
                 
         except Exception as e:
             logger.warning("Google token verification error", error=str(e))
@@ -151,6 +177,7 @@ async def google_login(
             raise HTTPException(status_code=400, detail=f"Google sign in error: {str(reg_err)}")
 
     logger.info("Google OAuth Success", email=email)
+    _set_refresh_cookie(response, token_response.refresh_token, settings.is_production)
 
     return success_response(
         data=token_response.model_dump(),
@@ -166,6 +193,8 @@ async def google_login(
 )
 async def register(
     payload: RegisterRequest,
+    response: Response,
+    settings: Settings = Depends(get_settings),
     auth_service: AuthService = Depends(_get_auth_service),
 ) -> dict[str, Any]:
     """Register a new user and return an access/refresh token pair."""
@@ -182,6 +211,7 @@ async def register(
         first_name=payload.first_name,
         last_name=payload.last_name,
     )
+    _set_refresh_cookie(response, token_response.refresh_token, settings.is_production)
     return success_response(
         data=token_response.model_dump(),
         message="Registration successful.",
@@ -195,13 +225,25 @@ async def register(
 )
 async def login(
     payload: LoginRequest,
+    response: Response,
+    settings: Settings = Depends(get_settings),
     auth_service: AuthService = Depends(_get_auth_service),
 ) -> dict[str, Any]:
     """Authenticate user credentials and return tokens."""
+    # Direct routing for Showcase Demo account credentials
+    if payload.email.lower() in ["demo@decisiontwin.ai", "demo@example.com", "demo@twinpath.ai"]:
+        token_response = await auth_service.showcase_demo_login()
+        _set_refresh_cookie(response, token_response.refresh_token, settings.is_production)
+        return success_response(
+            data=token_response.model_dump(),
+            message="Showcase Demo Twin login successful.",
+        )
+
     token_response = await auth_service.login(
         email=payload.email,
         password=payload.password,
     )
+    _set_refresh_cookie(response, token_response.refresh_token, settings.is_production)
     return success_response(
         data=token_response.model_dump(),
         message="Login successful.",
@@ -215,10 +257,13 @@ async def login(
 )
 async def guest_login(
     payload: GuestLoginRequest,
+    response: Response,
+    settings: Settings = Depends(get_settings),
     auth_service: AuthService = Depends(_get_auth_service),
 ) -> dict[str, Any]:
     """Create a guest user account and return JWT tokens."""
     token_response = await auth_service.guest_login(name=payload.name)
+    _set_refresh_cookie(response, token_response.refresh_token, settings.is_production)
     return success_response(
         data=token_response.model_dump(),
         message="Guest login successful.",
@@ -226,18 +271,45 @@ async def guest_login(
 
 
 @router.post(
-    "/refresh",
-    summary="Refresh access token",
-    description="Exchange a valid refresh token for a new token pair.",
+    "/demo",
+    summary="Login to Showcase Demo Twin",
+    description="Instantly authenticate into the pre-loaded 95% complete showcase twin profile.",
 )
-async def refresh_token(
-    payload: RefreshTokenRequest,
+async def showcase_demo_login(
+    response: Response,
+    settings: Settings = Depends(get_settings),
     auth_service: AuthService = Depends(_get_auth_service),
 ) -> dict[str, Any]:
-    """Refresh the access token using a valid refresh token."""
-    token_response = await auth_service.refresh(
-        refresh_token=payload.refresh_token,
+    """1-Click login to the pre-loaded Showcase Demo Twin profile."""
+    token_response = await auth_service.showcase_demo_login()
+    _set_refresh_cookie(response, token_response.refresh_token, settings.is_production)
+    return success_response(
+        data=token_response.model_dump(),
+        message="Showcase Demo Twin login successful.",
     )
+
+
+@router.post(
+    "/refresh",
+    summary="Refresh access token",
+    description="Exchange a valid refresh token (from body or httpOnly cookie) for a new token pair.",
+)
+async def refresh_token(
+    request: Request,
+    response: Response,
+    payload: RefreshTokenRequest | None = None,
+    settings: Settings = Depends(get_settings),
+    auth_service: AuthService = Depends(_get_auth_service),
+) -> dict[str, Any]:
+    """Refresh the access token using a valid refresh token from JSON body or httpOnly cookie."""
+    raw_token = (payload.refresh_token if payload and payload.refresh_token else None) or request.cookies.get("refresh_token")
+    if not raw_token:
+        raise UnauthorizedException(message="Refresh token is required.")
+
+    token_response = await auth_service.refresh(
+        refresh_token=raw_token,
+    )
+    _set_refresh_cookie(response, token_response.refresh_token, settings.is_production)
     return success_response(
         data=token_response.model_dump(),
         message="Token refreshed successfully.",
@@ -247,14 +319,22 @@ async def refresh_token(
 @router.post(
     "/logout",
     summary="Logout",
-    description="Revoke the refresh token to end the session.",
+    description="Revoke the refresh token to end the session and clear cookies.",
 )
 async def logout(
-    payload: RefreshTokenRequest,
+    request: Request,
+    response: Response,
+    payload: RefreshTokenRequest | None = None,
     auth_service: AuthService = Depends(_get_auth_service),
 ) -> dict[str, Any]:
-    """Logout by revoking the refresh token."""
-    await auth_service.logout(refresh_token=payload.refresh_token)
+    """Logout by revoking the refresh token and clearing the httpOnly cookie."""
+    raw_token = (payload.refresh_token if payload and payload.refresh_token else None) or request.cookies.get("refresh_token")
+    if raw_token:
+        try:
+            await auth_service.logout(refresh_token=raw_token)
+        except Exception:
+            pass
+    _clear_refresh_cookie(response)
     return success_response(
         data=None,
         message="Logged out successfully.",
@@ -284,6 +364,40 @@ async def get_me(
     return success_response(
         data=user_data.model_dump(mode="json"),
         message="User retrieved successfully.",
+    )
+
+
+@router.patch(
+    "/me",
+    summary="Update current user",
+    description="Update the authenticated user's name or personal attributes.",
+)
+async def update_me(
+    payload: UserUpdate,
+    current_user: TokenPayload = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Update first and last name for current user."""
+    user_repo = UserRepository(session)
+    import uuid
+
+    user = await user_repo.get_by_id(uuid.UUID(current_user.sub))
+    if user is None:
+        from app.core.exceptions import NotFoundException
+        raise NotFoundException(message="User not found.")
+
+    if payload.first_name is not None:
+        user.first_name = payload.first_name.strip()
+    if payload.last_name is not None:
+        user.last_name = payload.last_name.strip()
+
+    await session.commit()
+    await session.refresh(user)
+
+    user_data = UserRead.model_validate(user)
+    return success_response(
+        data=user_data.model_dump(mode="json"),
+        message="User details updated successfully.",
     )
 
 

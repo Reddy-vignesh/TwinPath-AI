@@ -1,89 +1,128 @@
+import { useState } from 'react';
 import { useProfileStore } from '../../stores/profileStore';
 import { useThemeStore } from '../../stores/themeStore';
-import { Bell, Sparkles, Sun, Moon } from 'lucide-react';
+import { Bell, Sparkles, Sun, Moon, Info } from 'lucide-react';
+import { ProjectInfoModal } from '../ProjectInfoModal';
+import { NotificationsModal } from '../NotificationsModal';
 
 export default function TopBar() {
   const { profile } = useProfileStore();
   const { theme, toggleTheme } = useThemeStore();
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(3);
 
   const completeness = profile?.twin_completeness_score || 0;
   const isComplete = completeness >= 0.8;
 
   return (
     <header className="topbar">
-      <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ 
-            width: '8px', 
-            height: '8px', 
+            width: '7px', 
+            height: '7px', 
             borderRadius: '50%', 
-            background: 'var(--accent-blue)', 
-            boxShadow: '0 0 10px var(--accent-blue)',
+            background: 'var(--success)', 
             display: 'inline-block' 
           }} />
-          <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Digital Twin Portal</h3>
+          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            Twin Engine
+          </span>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>/</span>
+          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            Vector Workspace
+          </span>
         </div>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', margin: 0 }}>
-          Real-time Career Vectors & Market Predictions Active
-        </p>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
-        {/* Theme Switcher Toggle Button */}
-        <button
-          onClick={toggleTheme}
-          className="btn"
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        {/* About Project Button (Linear-Grade Action) */}
+        <button 
+          onClick={() => setIsInfoModalOpen(true)}
+          className="btn btn-secondary"
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.45rem 0.85rem',
-            borderRadius: 'var(--radius-full)',
-            background: theme === 'light' ? 'rgba(2, 132, 199, 0.1)' : 'rgba(6, 182, 212, 0.12)',
-            border: theme === 'light' ? '1px solid rgba(2, 132, 199, 0.4)' : '1px solid rgba(6, 182, 212, 0.4)',
-            color: 'var(--text-primary)',
+            gap: '0.4rem',
+            padding: '0.35rem 0.75rem',
             fontSize: '0.8125rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 0 12px var(--shadow-glow)'
+            fontWeight: 500,
+            borderRadius: 'var(--radius-md)',
+            whiteSpace: 'nowrap'
           }}
-          title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
         >
-          {theme === 'light' ? (
-            <>
-              <Moon size={15} color="#0284C7" />
-              <span>Dark Mode</span>
-            </>
-          ) : (
-            <>
-              <Sun size={15} color="#06B6D4" />
-              <span>Light Mode</span>
-            </>
-          )}
+          <Info size={14} color="var(--text-secondary)" />
+          <span>About Project</span>
         </button>
 
-        {/* Completeness Badge */}
+        {/* Theme Switcher */}
+        <label className="theme-switch" title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}>
+          <input 
+            type="checkbox" 
+            checked={theme === 'light'} 
+            onChange={toggleTheme} 
+          />
+          <span className="theme-slider">
+            <span className="theme-slider-knob">
+              {theme === 'light' ? <Sun size={12} color="#0284c7" /> : <Moon size={12} color="#3B82F6" />}
+            </span>
+          </span>
+        </label>
+
+        {/* Completeness Badge (Crisp Data Pill) */}
         <div 
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '0.5rem',
+            gap: '0.4rem',
             background: isComplete ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-            padding: '0.5rem 1rem',
-            borderRadius: 'var(--radius-full)',
-            border: `1px solid ${isComplete ? 'var(--success)' : 'var(--warning)'}`
+            padding: '0.35rem 0.75rem',
+            borderRadius: 'var(--radius-md)',
+            border: `1px solid ${isComplete ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`
           }}
         >
-          <Sparkles size={16} color={isComplete ? 'var(--success)' : 'var(--warning)'} />
-          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: isComplete ? 'var(--success)' : 'var(--warning)' }}>
-            Twin Completeness: {Math.round(completeness * 100)}%
+          <Sparkles size={13} color={isComplete ? 'var(--success)' : 'var(--warning)'} />
+          <span style={{ fontSize: '0.78125rem', fontWeight: 600, color: isComplete ? 'var(--success)' : 'var(--warning)' }}>
+            Fidelity {Math.round(completeness * 100)}%
           </span>
         </div>
 
-        <button className="btn" style={{ background: 'transparent', padding: '0.5rem' }}>
-          <Bell size={20} color="var(--text-secondary)" />
+        {/* Interactive Notifications Button */}
+        <button 
+          onClick={() => setIsNotificationsOpen(true)}
+          className="btn btn-secondary" 
+          style={{ 
+            padding: '0.4rem', 
+            borderRadius: 'var(--radius-md)',
+            position: 'relative',
+            cursor: 'pointer'
+          }}
+          aria-label="Notifications"
+          title="View System Alerts & Notifications"
+        >
+          <Bell size={15} color="var(--text-secondary)" />
+          {unreadCount > 0 && (
+            <span style={{
+              position: 'absolute',
+              top: '4px',
+              right: '4px',
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: 'var(--accent-primary)',
+              boxShadow: '0 0 6px var(--accent-primary)'
+            }} />
+          )}
         </button>
+
+        {/* Modals */}
+        <ProjectInfoModal isOpen={isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)} />
+        <NotificationsModal 
+          isOpen={isNotificationsOpen} 
+          onClose={() => setIsNotificationsOpen(false)} 
+          onUnreadChange={setUnreadCount} 
+        />
       </div>
     </header>
   );

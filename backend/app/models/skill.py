@@ -32,7 +32,7 @@ from app.core.constants import (
     TITLE_MAX_LENGTH,
     SkillCategory,
 )
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.base import Base, GUID, TimestampMixin, UUIDMixin
 
 
 class Skill(UUIDMixin, TimestampMixin, Base):
@@ -86,12 +86,12 @@ class UserSkill(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "user_skills"
 
     profile_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("student_profiles.id", ondelete="CASCADE"),
         nullable=False,
     )
     skill_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("skills.id", ondelete="CASCADE"),
         nullable=False,
     )

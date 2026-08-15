@@ -170,9 +170,9 @@ class LoginRequest(BaseModel):
 class RefreshTokenRequest(BaseModel):
     """Token refresh request payload."""
 
-    refresh_token: str = Field(
-        min_length=1,
-        description="Valid refresh token from previous login or refresh",
+    refresh_token: str | None = Field(
+        default=None,
+        description="Valid refresh token (optional if refresh_token httpOnly cookie is present)",
     )
 
 

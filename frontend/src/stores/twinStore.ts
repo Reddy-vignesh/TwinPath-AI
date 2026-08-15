@@ -17,11 +17,21 @@ export interface Recommendation {
     salary_range_high?: number;
   };
   skill_gap?: {
-    match_score: number;
-    required_met: number;
-    required_total: number;
-    gaps: Array<{ name: string; required_level: number; current_level: number; priority: string }>;
-    strengths: string[];
+    match_score?: number;
+    required_met?: number;
+    required_total?: number;
+    gaps?: Array<{ 
+      skill?: string; 
+      name?: string; 
+      required_level?: number; 
+      preferred_level?: number; 
+      current_level?: number; 
+      priority?: string;
+      gap?: number;
+      is_required?: boolean;
+    }>;
+    strengths?: Array<string | { skill?: string; name?: string; current_level?: number }>;
+    priority_learning?: Array<{ skill?: string; name?: string; gap?: number }>;
   };
   explanation?: {
     top_reasons?: string[];
@@ -51,6 +61,7 @@ export interface SalaryPrediction {
 interface TwinState {
   recommendations: Recommendation[];
   isLoadingRecs: boolean;
+  recsError: string | null;
 
   simulatedRecommendations: Recommendation[] | null;
   simulationImpact: SimulationImpact | null;
@@ -69,6 +80,7 @@ interface TwinState {
 export const useTwinStore = create<TwinState>((set, get) => ({
   recommendations: [],
   isLoadingRecs: false,
+  recsError: null,
 
   simulatedRecommendations: null,
   simulationImpact: null,
@@ -79,18 +91,20 @@ export const useTwinStore = create<TwinState>((set, get) => ({
   isLoadingSalary: false,
 
   fetchRecommendations: async () => {
-    // Avoid duplicate fetches if already loading
     if (get().isLoadingRecs) return;
-    set({ isLoadingRecs: true });
+    set({ isLoadingRecs: true, recsError: null });
     try {
       const response = await apiClient.post('/recommendations', {
         top_k: 10,
         include_explanation: true,
         include_skill_gap: true,
       });
-      set({ recommendations: response.data.data.recommendations ?? [] });
-    } catch (error) {
+      const recs = response.data?.data?.recommendations ?? [];
+      set({ recommendations: recs, recsError: null });
+    } catch (error: any) {
       console.error('Failed to fetch recommendations', error);
+      const msg = error?.response?.data?.message || error?.response?.data?.detail || error?.message || 'Error generating recommendations';
+      set({ recsError: msg });
     } finally {
       set({ isLoadingRecs: false });
     }
@@ -101,8 +115,6 @@ export const useTwinStore = create<TwinState>((set, get) => ({
     try {
       const response = await apiClient.post('/simulations', { mutations, top_k: 10 });
       const result = response.data.data;
-      // Simulation returns flat {title, rank, career_id, similarity_score}
-      // Normalize to be usable by both the store and the Simulator page
       const rawSimCareers = result.simulated?.top_careers ?? [];
       const simulated = rawSimCareers.map((c: any) => ({
         ...c,

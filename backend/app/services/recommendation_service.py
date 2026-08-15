@@ -103,8 +103,14 @@ async def ensure_index_built(session: AsyncSession) -> int:
         ]
         logger.info("Building index from DB careers", count=len(career_dicts))
     else:
-        # Fall back to seed data
-        career_dicts = CAREER_SEED_DATA
+        # Fall back to seed data with deterministic UUIDs
+        career_dicts = [
+            {
+                "id": str(c.get("id") or uuid.uuid5(uuid.NAMESPACE_DNS, c.get("title", "career"))),
+                **c,
+            }
+            for c in CAREER_SEED_DATA
+        ]
         logger.info("Building index from seed data", count=len(career_dicts))
 
     count = _global_engine.build_career_index(career_dicts)

@@ -24,7 +24,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.constants import NAME_MAX_LENGTH, TITLE_MAX_LENGTH
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.base import Base, GUID, TimestampMixin, UUIDMixin
 
 
 class AcademicRecord(UUIDMixin, TimestampMixin, Base):
@@ -38,7 +38,7 @@ class AcademicRecord(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "academic_records"
 
     profile_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("student_profiles.id", ondelete="CASCADE"),
         nullable=False,
     )

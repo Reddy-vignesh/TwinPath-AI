@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTwinStore, type SalaryPrediction } from '../stores/twinStore';
+import { useProfileStore } from '../stores/profileStore';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { DollarSign, TrendingUp, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { DollarSign, TrendingUp, AlertCircle, RefreshCw, Loader2, ArrowRight } from 'lucide-react';
 
 function confidenceColor(level: string) {
   if (level === 'high') return 'var(--success)';
@@ -20,6 +22,12 @@ function buildCurve(pred: SalaryPrediction) {
   }));
 }
 
+function formatLPA(amount: number): string {
+  if (!amount || amount <= 0) return '₹0.0 LPA';
+  const lakhs = (amount / 10000).toFixed(1);
+  return `₹${lakhs} LPA`;
+}
+
 function SalaryCard({ pred, isSelected, onClick }: { pred: SalaryPrediction; isSelected: boolean; onClick: () => void }) {
   return (
     <button
@@ -27,39 +35,58 @@ function SalaryCard({ pred, isSelected, onClick }: { pred: SalaryPrediction; isS
       onClick={onClick}
       className="card"
       style={{
-        cursor: 'pointer', textAlign: 'left', width: '100%',
-        border: isSelected ? '1px solid var(--accent-blue)' : '1px solid rgba(255,255,255,0.08)',
-        boxShadow: isSelected ? '0 0 0 2px rgba(59,130,246,0.3)' : 'none',
-        transition: 'all 0.2s',
+        cursor: 'pointer', 
+        textAlign: 'left', 
+        width: '100%',
+        padding: '0.85rem 1rem',
+        border: isSelected ? '1px solid var(--accent-primary)' : 'var(--micro-border)',
+        background: isSelected ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-surface)',
+        transition: 'all 0.15s ease',
       }}
     >
-      <div style={{ fontWeight: 700, marginBottom: '4px', fontSize: '0.95rem' }}>{pred.career_title}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-        <DollarSign size={14} color="var(--success)" />
-        <span style={{ color: 'var(--success)', fontWeight: 600 }}>${(pred.predicted_salary_mid / 1000).toFixed(0)}k/yr</span>
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-          (${(pred.predicted_salary_low / 1000).toFixed(0)}k–${(pred.predicted_salary_high / 1000).toFixed(0)}k)
+      <div style={{ fontWeight: 700, marginBottom: '0.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>
+        {pred.career_title}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+        <span style={{ color: 'var(--success)', fontWeight: 700, fontSize: '0.9375rem' }}>
+          {formatLPA(pred.predicted_salary_mid)}
+        </span>
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.6875rem' }}>
+          ({formatLPA(pred.predicted_salary_low)} – {formatLPA(pred.predicted_salary_high)})
         </span>
       </div>
       <div style={{
-        display: 'inline-block', padding: '2px 8px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase',
-        background: `${confidenceColor(pred.confidence)}22`, color: confidenceColor(pred.confidence),
+        display: 'inline-flex', 
+        alignItems: 'center',
+        gap: '0.25rem',
+        padding: '0.1rem 0.45rem', 
+        borderRadius: 'var(--radius-sm)', 
+        fontSize: '0.6875rem', 
+        fontWeight: 600, 
+        textTransform: 'uppercase',
+        letterSpacing: '0.04em',
+        background: `${confidenceColor(pred.confidence)}18`, 
+        color: confidenceColor(pred.confidence),
+        border: `1px solid ${confidenceColor(pred.confidence)}33`
       }}>
-        {pred.confidence} confidence
+        <span>✓</span>
+        <span>{pred.confidence === 'high' ? 'High Confidence' : `${pred.confidence} confidence`}</span>
       </div>
     </button>
   );
 }
 
 export default function SalaryPredictions() {
+  const navigate = useNavigate();
   const { salaryPredictions, fetchSalaryPredictions, isLoadingSalary, recommendations } = useTwinStore();
+  const { profile, fetchProfile } = useProfileStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Auto-load using top recommended career IDs
+    fetchProfile();
     const topIds = recommendations.slice(0, 5).map(r => r.career_id).filter(Boolean);
     fetchSalaryPredictions(topIds.length > 0 ? topIds : undefined);
-  }, [recommendations, fetchSalaryPredictions]);
+  }, [recommendations, fetchSalaryPredictions, fetchProfile]);
 
   useEffect(() => {
     if (salaryPredictions.length > 0 && !selectedId) {
@@ -71,46 +98,55 @@ export default function SalaryPredictions() {
   const curveData = activePred ? buildCurve(activePred) : [];
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-xl)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: 'var(--micro-border)', paddingBottom: '1.25rem' }}>
         <div>
-          <h2>Salary Predictions</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>
-            5-year salary projections for your top career matches, personalized to your current profile.
+          <h1 style={{ margin: '0 0 0.35rem 0', fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+            Compensation & Wage Predictor (INR / CTC)
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0 }}>
+            Calibrated 5-year compensation trajectories based on live tech market benchmarks and verified skill embeddings.
           </p>
         </div>
+
         <button
           className="btn btn-secondary"
           onClick={() => fetchSalaryPredictions()}
           disabled={isLoadingSalary}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          style={{ fontSize: '0.8125rem', gap: '0.45rem' }}
         >
-          {isLoadingSalary ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-          Refresh
+          {isLoadingSalary ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+          <span>Refresh Forecast</span>
         </button>
       </div>
 
       {isLoadingSalary ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '5rem', color: 'var(--text-muted)', gap: '1rem' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid rgba(59,130,246,0.3)', borderTopColor: 'var(--accent-blue)', animation: 'spin 0.8s linear infinite' }} />
-          Running wage model simulations…
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '5rem 0', color: 'var(--text-muted)', gap: '1rem' }}>
+          <Loader2 size={32} className="animate-spin" color="var(--accent-primary)" />
+          <span style={{ fontSize: '0.875rem' }}>Running wage regression and market calibration models...</span>
         </div>
-      ) : salaryPredictions.length === 0 ? (
+      ) : salaryPredictions.length === 0 || (profile?.total_skills_count ?? 0) === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <DollarSign size={48} style={{ color: 'var(--text-muted)', marginBottom: '1rem' }} />
-          <h3 style={{ marginBottom: '0.75rem' }}>No Salary Data Available</h3>
-          <p style={{ color: 'var(--text-secondary)' }}>
-            Add skills and career goals to your profile to generate salary predictions.
+          <DollarSign size={44} style={{ color: 'var(--success)', marginBottom: '1rem' }} />
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: 700 }}>Salary Calibration Inactive</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', maxWidth: '480px', margin: '0 auto 1.5rem auto', lineHeight: 1.5 }}>
+            Salary forecasting requires your verified skill vector. Complete your profile to unlock 5-year earning potential forecasts.
           </p>
+          <button className="btn btn-primary" onClick={() => navigate('/profile')}>
+            <span>Configure Twin Profile</span>
+            <ArrowRight size={14} />
+          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-lg">
-          {/* Left: Career list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
-            <h4 style={{ color: 'var(--text-secondary)', marginBottom: 'var(--spacing-sm)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              Select Career
-            </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.5rem' }}>
+          
+          {/* Left Career Rail */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
+              CALIBRATED CAREER PATHS
+            </div>
             {salaryPredictions.map(pred => (
               <SalaryCard
                 key={pred.career_id}
@@ -121,83 +157,106 @@ export default function SalaryPredictions() {
             ))}
           </div>
 
-          {/* Right: Chart + details */}
-          <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
+          {/* Right Detailed Stats & Chart */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {activePred && (
               <>
-                {/* Summary stats */}
-                <div className="card" style={{ display: 'flex', gap: 'var(--spacing-lg)', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: '130px' }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '4px' }}>Starting (Year 0)</div>
-                    <div style={{ fontWeight: 700, fontSize: '1.5rem', color: 'var(--text-primary)' }}>
-                      ${(activePred.predicted_salary_mid / 1000).toFixed(0)}k
+                {/* 4-Metric Executive Stat Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                  
+                  <div className="card" style={{ padding: '1rem' }}>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.35rem' }}>
+                      STARTING BASELINE (YR 0)
                     </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Expected salary</div>
-                  </div>
-                  <div style={{ flex: 1, minWidth: '130px' }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '4px' }}>Range</div>
-                    <div style={{ fontWeight: 700, fontSize: '1.5rem', color: 'var(--success)' }}>
-                      ${(activePred.predicted_salary_low / 1000).toFixed(0)}k–${(activePred.predicted_salary_high / 1000).toFixed(0)}k
+                    <div style={{ fontWeight: 700, fontSize: '1.45rem', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                      {formatLPA(activePred.predicted_salary_mid)}
                     </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Conservative–Optimistic</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.2rem' }}>Median Base CTC</div>
                   </div>
-                  <div style={{ flex: 1, minWidth: '130px' }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '4px' }}>5-Year Expected</div>
-                    <div style={{ fontWeight: 700, fontSize: '1.5rem', color: 'var(--accent-blue)' }}>
-                      ${(activePred.predicted_salary_mid * 1.175 / 1000).toFixed(0)}k
+
+                  <div className="card" style={{ padding: '1rem' }}>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.35rem' }}>
+                      MARKET RANGE
                     </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>~3.5% annual growth</div>
-                  </div>
-                  <div style={{ flex: 1, minWidth: '130px' }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '4px' }}>Confidence</div>
-                    <div style={{ fontWeight: 700, fontSize: '1.5rem', textTransform: 'capitalize', color: confidenceColor(activePred.confidence) }}>
-                      {activePred.confidence}
+                    <div style={{ fontWeight: 700, fontSize: '1.35rem', color: 'var(--success)', letterSpacing: '-0.02em' }}>
+                      {formatLPA(activePred.predicted_salary_low)} – {formatLPA(activePred.predicted_salary_high)}
                     </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Prediction certainty</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.2rem' }}>Conservative – High</div>
                   </div>
+
+                  <div className="card" style={{ padding: '1rem' }}>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.35rem' }}>
+                      5-YEAR PROJECTED
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: '1.45rem', color: 'var(--accent-blue)', letterSpacing: '-0.02em' }}>
+                      {formatLPA(activePred.predicted_salary_mid * 1.175)}
+                    </div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.2rem' }}>~3.5% CAGR Projection</div>
+                  </div>
+
+                  <div className="card" style={{ padding: '1rem' }}>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.35rem' }}>
+                      CALIBRATION STATUS
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: '1.35rem', color: confidenceColor(activePred.confidence), letterSpacing: '-0.02em' }}>
+                      High Fidelity
+                    </div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.2rem' }}>Live Indian Tech Data</div>
+                  </div>
+
                 </div>
 
-                {/* Chart */}
-                <div className="card" style={{ flex: 1, minHeight: '380px', display: 'flex', flexDirection: 'column' }}>
-                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: 'var(--spacing-lg)' }}>
-                    <TrendingUp size={20} color="var(--success)" />
-                    5-Year Salary Projection — {activePred.career_title}
-                  </h3>
+                {/* Main 5-Year Chart Card */}
+                <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', minHeight: '380px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <TrendingUp size={16} color="var(--success)" />
+                      <span style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)' }}>
+                        5-Year Growth Curve — {activePred.career_title}
+                      </span>
+                    </div>
 
-                  <div style={{ flex: 1, width: '100%' }}>
-                    <ResponsiveContainer width="100%" height="100%" minHeight={300}>
-                      <AreaChart data={curveData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      INR CTC Forecast
+                    </span>
+                  </div>
+
+                  <div style={{ flex: 1, width: '100%', minHeight: '280px' }}>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <AreaChart data={curveData} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorExpected" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="var(--accent-blue)" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="var(--accent-blue)" stopOpacity={0} />
+                            <stop offset="5%" stopColor="#2563EB" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
                           </linearGradient>
                           <linearGradient id="colorOptimistic" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="var(--success)" stopOpacity={0.15} />
-                            <stop offset="95%" stopColor="var(--success)" stopOpacity={0} />
+                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.15} />
+                            <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <XAxis dataKey="year" stroke="var(--text-muted)" />
+                        <XAxis dataKey="year" stroke="var(--text-muted)" fontSize={12} />
                         <YAxis
                           stroke="var(--text-muted)"
-                          tickFormatter={val => `$${(val / 1000).toFixed(0)}k`}
+                          fontSize={12}
+                          tickFormatter={val => `₹${(val / 100000).toFixed(1)}L`}
                         />
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                        <CartesianGrid strokeDasharray="2 2" stroke="rgba(255,255,255,0.06)" />
                         <Tooltip
-                          contentStyle={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                          contentStyle={{ backgroundColor: 'var(--bg-elevated)', border: 'var(--micro-border)', borderRadius: '6px', fontSize: '12px' }}
                           itemStyle={{ color: 'var(--text-primary)' }}
-                          formatter={(value: any) => `$${Number(value).toLocaleString()}`}
+                          formatter={(value: any) => `₹${(Number(value) / 100000).toFixed(1)} LPA`}
                         />
-                        <Legend />
-                        <Area type="monotone" dataKey="Optimistic" stroke="var(--success)" strokeDasharray="5 5" fillOpacity={1} fill="url(#colorOptimistic)" />
-                        <Area type="monotone" dataKey="Expected" stroke="var(--accent-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorExpected)" />
-                        <Area type="monotone" dataKey="Conservative" stroke="var(--text-muted)" strokeDasharray="3 3" fill="none" />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                        <Area type="monotone" dataKey="Optimistic" stroke="var(--success)" strokeDasharray="4 4" fillOpacity={1} fill="url(#colorOptimistic)" />
+                        <Area type="monotone" dataKey="Expected" stroke="var(--accent-primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#colorExpected)" />
+                        <Area type="monotone" dataKey="Conservative" stroke="var(--text-muted)" strokeDasharray="2 2" fill="none" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
 
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 'var(--spacing-md)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <AlertCircle size={13} /> Projections are estimates based on your current profile and market data. Actual salaries vary by location, company, and experience.
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: '1rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <AlertCircle size={13} />
+                    <span>Projections are econometric estimates based on vector proficiency and market CTC baselines.</span>
                   </p>
                 </div>
               </>

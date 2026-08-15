@@ -36,15 +36,28 @@ files_to_push = [
     ("frontend/src/pages/Profile.tsx", os.path.join(ROOT, r"frontend\src\pages\Profile.tsx")),
     ("frontend/src/pages/Simulator.tsx", os.path.join(ROOT, r"frontend\src\pages\Simulator.tsx")),
     ("frontend/src/pages/TwinVisualizer.tsx", os.path.join(ROOT, r"frontend\src\pages\TwinVisualizer.tsx")),
-    ("frontend/src/components/FeedbackModal.tsx", os.path.join(ROOT, r"frontend\src\components\FeedbackModal.tsx")),
-    ("frontend/src/components/layout/AppShell.tsx", os.path.join(ROOT, r"frontend\src\components\layout\AppShell.tsx")),
-    ("frontend/src/components/layout/TopBar.tsx", os.path.join(ROOT, r"frontend\src\components\layout\TopBar.tsx")),
     ("frontend/src/components/Loader.tsx", os.path.join(ROOT, r"frontend\src\components\Loader.tsx")),
     ("frontend/src/components/PageLoader.tsx", os.path.join(ROOT, r"frontend\src\components\PageLoader.tsx")),
+    ("frontend/src/components/FeedbackModal.tsx", os.path.join(ROOT, r"frontend\src\components\FeedbackModal.tsx")),
+    ("frontend/src/components/ProjectInfoModal.tsx", os.path.join(ROOT, r"frontend\src\components\ProjectInfoModal.tsx")),
+    ("frontend/src/components/layout/AppShell.tsx", os.path.join(ROOT, r"frontend\src\components\layout\AppShell.tsx")),
+    ("frontend/src/components/layout/TopBar.tsx", os.path.join(ROOT, r"frontend\src\components\layout\TopBar.tsx")),
     ("frontend/src/pages/Dashboard.tsx", os.path.join(ROOT, r"frontend\src\pages\Dashboard.tsx")),
     ("frontend/src/index.css", os.path.join(ROOT, r"frontend\src\index.css")),
     ("frontend/src/stores/authStore.ts", os.path.join(ROOT, r"frontend\src\stores\authStore.ts")),
-    ("frontend/src/stores/themeStore.ts", os.path.join(ROOT, r"frontend\src\stores\themeStore.ts"))
+    ("frontend/src/stores/themeStore.ts", os.path.join(ROOT, r"frontend\src\stores\themeStore.ts")),
+    ("backend/app/models/base.py", os.path.join(ROOT, r"backend\app\models\base.py")),
+    ("backend/app/models/career.py", os.path.join(ROOT, r"backend\app\models\career.py")),
+    ("backend/app/models/project.py", os.path.join(ROOT, r"backend\app\models\project.py")),
+    ("backend/app/models/psychometric.py", os.path.join(ROOT, r"backend\app\models\psychometric.py")),
+    ("backend/app/models/behavior.py", os.path.join(ROOT, r"backend\app\models\behavior.py")),
+    ("backend/app/models/audit_log.py", os.path.join(ROOT, r"backend\app\models\audit_log.py")),
+    ("backend/app/models/skill.py", os.path.join(ROOT, r"backend\app\models\skill.py")),
+    ("backend/app/models/academic.py", os.path.join(ROOT, r"backend\app\models\academic.py")),
+    ("backend/app/models/certification.py", os.path.join(ROOT, r"backend\app\models\certification.py")),
+    ("backend/app/schemas/skill.py", os.path.join(ROOT, r"backend\app\schemas\skill.py")),
+    ("backend/app/api/v1/endpoints/skills.py", os.path.join(ROOT, r"backend\app\api\v1\endpoints\skills.py")),
+    ("backend/app/services/auth_service.py", os.path.join(ROOT, r"backend\app\services\auth_service.py"))
 ]
 
 headers = {

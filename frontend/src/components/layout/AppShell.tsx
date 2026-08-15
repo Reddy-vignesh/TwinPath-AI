@@ -1,3 +1,4 @@
+// AppShell layout wrapper with PageLoader transition support
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -47,10 +48,12 @@ export default function AppShell({ children }: AppShellProps) {
       setIsPageTransitioning(true);
       const timer = setTimeout(() => {
         setIsPageTransitioning(false);
-      }, 2000);
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [location.pathname]);
+
+
 
   const handleLogout = () => {
     logout();
@@ -65,16 +68,36 @@ export default function AppShell({ children }: AppShellProps) {
       {/* Feedback Modal */}
       <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
 
-      {/* Sidebar */}
+      {/* Linear-Grade Clean Sidebar */}
       <aside className="sidebar">
-        <div style={{ padding: 'var(--spacing-md) 0', marginBottom: 'var(--spacing-xl)' }}>
-          <h2 className="text-gradient" style={{ fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '2rem' }}>⚡</span>
-            TwinPath AI
-          </h2>
+        {/* Brand Header */}
+        <div style={{ padding: '0.25rem 0.5rem 1.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '6px',
+            background: 'var(--accent-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#FFFFFF',
+            fontWeight: 800,
+            fontSize: '0.875rem'
+          }}>
+            T
+          </div>
+          <div>
+            <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+              TwinPath AI
+            </div>
+            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.02em' }}>
+              Decision Intelligence
+            </div>
+          </div>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)', flex: 1 }}>
+        {/* Navigation Items */}
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1 }}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -85,64 +108,92 @@ export default function AppShell({ children }: AppShellProps) {
                 className="btn"
                 style={{
                   justifyContent: 'flex-start',
-                  background: isActive ? 'rgba(6, 182, 212, 0.12)' : 'transparent',
-                  color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                  borderLeft: isActive ? '3px solid var(--accent-blue)' : '3px solid transparent',
-                  borderTop: '1px solid transparent',
-                  borderRight: '1px solid transparent',
-                  borderBottom: '1px solid transparent',
+                  background: isActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                   borderRadius: 'var(--radius-md)',
-                  transition: 'all 0.2s ease',
-                  boxShadow: isActive ? '0 0 12px var(--shadow-glow)' : 'none'
+                  padding: '0.5rem 0.75rem',
+                  fontSize: '0.8125rem',
+                  fontWeight: isActive ? 600 : 500,
+                  letterSpacing: '-0.01em',
+                  border: '1px solid transparent',
+                  width: '100%',
+                  gap: '0.65rem'
                 }}
                 onClick={() => navigate(item.path)}
               >
-                <Icon size={20} />
-                {item.label}
+                <Icon size={16} color={isActive ? 'var(--accent-blue)' : 'var(--text-muted)'} />
+                <span>{item.label}</span>
               </button>
             );
           })}
         </nav>
 
-        <div style={{ marginTop: 'auto', paddingTop: 'var(--spacing-lg)', borderTop: 'var(--glass-border)' }}>
+        {/* Footer Area */}
+        <div style={{ marginTop: 'auto', paddingTop: '0.85rem', borderTop: 'var(--micro-border)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <button 
-            className="btn"
+            className="btn btn-secondary"
             style={{ 
               width: '100%', 
-              marginBottom: 'var(--spacing-md)',
-              background: 'rgba(99, 102, 241, 0.12)',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
-              color: 'var(--accent-purple)',
-              fontWeight: 600
+              fontSize: '0.8125rem',
+              padding: '0.45rem 0.75rem',
+              justifyContent: 'flex-start',
+              gap: '0.5rem'
             }}
             onClick={() => setIsFeedbackOpen(true)}
           >
-            <MessageSquarePlus size={18} color="var(--accent-purple)" />
-            Feedback & Support
+            <MessageSquarePlus size={15} color="var(--text-secondary)" />
+            <span>Feedback & Support</span>
           </button>
 
-          <div style={{ marginBottom: 'var(--spacing-md)', padding: '0.25rem 0.5rem' }}>
-            <div style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'User Profile'}
+          {/* User Account Tile */}
+          <div style={{ 
+            padding: '0.5rem 0.65rem',
+            background: 'var(--bg-elevated)',
+            borderRadius: 'var(--radius-md)',
+            border: 'var(--micro-border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.5rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                background: 'var(--accent-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: '0.6875rem',
+                color: '#FFFFFF'
+              }}>
+                {user?.firstName ? user.firstName[0].toUpperCase() : 'U'}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'User'}
+                </div>
+              </div>
             </div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user?.email || ''}
-            </div>
+
+            <button 
+              onClick={handleLogout}
+              title="Logout"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0.2rem'
+              }}
+            >
+              <LogOut size={14} />
+            </button>
           </div>
-          <button 
-            className="btn"
-            style={{ 
-              width: '100%', 
-              background: 'rgba(239, 68, 68, 0.1)', 
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: 'var(--error)',
-              fontWeight: 600
-            }}
-            onClick={handleLogout}
-          >
-            <LogOut size={18} />
-            Logout
-          </button>
         </div>
       </aside>
 
