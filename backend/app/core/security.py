@@ -19,7 +19,6 @@ from uuid import uuid4
 import jwt
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from passlib.context import CryptContext
 
 from app.config import Settings, get_settings
 from app.core.constants import UserRole
@@ -28,14 +27,7 @@ from app.core.exceptions import ForbiddenException, UnauthorizedException
 if TYPE_CHECKING:
     pass
 
-# ── Password Hashing ───────────────────────────────────────────────
-
-_pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__rounds=10,
-)
-
+import bcrypt
 
 def hash_password(plain_password: str) -> str:
     """
@@ -49,7 +41,9 @@ def hash_password(plain_password: str) -> str:
     Returns:
         The bcrypt hash string.
     """
-    return _pwd_context.hash(plain_password)
+    salt = bcrypt.gensalt(rounds=10)
+    hashed_bytes = bcrypt.hashpw(plain_password.encode("utf-8"), salt)
+    return hashed_bytes.decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -65,7 +59,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if the password matches the hash.
     """
-    return _pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            hashed_password.encode("utf-8"),
+        )
+    except ValueError:
+        return False
 
 
 # ── JWT Token Management ──────────────────────────────────────────
