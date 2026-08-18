@@ -20,7 +20,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function App() {
-  const { fetchUser, isAuthenticated } = useAuthStore();
+  const { fetchUser } = useAuthStore();
 
   // Reload user info on mount (e.g. after page refresh)
   useEffect(() => {
@@ -31,10 +31,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Public */}
-        <Route
-          path="/login"
-          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
-        />
+        <Route path="/login" element={<Login />} />
 
         {/* Protected — real pages */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

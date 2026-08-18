@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { useProfileStore } from '../../stores/profileStore';
 import { useThemeStore } from '../../stores/themeStore';
-import { Bell, Sparkles, Sun, Moon, Info } from 'lucide-react';
+import { Bell, Sparkles, Sun, Moon, Info, PanelLeft } from 'lucide-react';
 import { ProjectInfoModal } from '../ProjectInfoModal';
 import { NotificationsModal } from '../NotificationsModal';
 
-export default function TopBar() {
+interface TopBarProps {
+  isSidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
+}
+
+export default function TopBar({ isSidebarCollapsed = false, onToggleSidebar }: TopBarProps) {
   const { profile } = useProfileStore();
   const { theme, toggleTheme } = useThemeStore();
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
@@ -18,6 +23,18 @@ export default function TopBar() {
   return (
     <header className="topbar">
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        {onToggleSidebar && (
+          <button
+            onClick={onToggleSidebar}
+            className="sidebar-toggle-btn"
+            title={isSidebarCollapsed ? "Expand Navigation Menu" : "Collapse Navigation Menu"}
+            aria-label="Toggle Sidebar Menu"
+            style={{ marginRight: '0.25rem' }}
+          >
+            <PanelLeft size={18} color="var(--text-secondary)" />
+          </button>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ 
             width: '7px', 

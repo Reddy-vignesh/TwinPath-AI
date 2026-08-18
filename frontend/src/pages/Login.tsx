@@ -6,6 +6,7 @@ import { apiClient } from '../api/client';
 import { X } from 'lucide-react';
 import Loader from '../components/Loader';
 import { ProjectInfoFloatingTrigger } from '../components/ProjectInfoModal';
+import loginBg from '../assets/login-bg.jpg';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -270,7 +271,24 @@ export default function Login() {
   }
 
   return (
-    <div className="rain-bg-container">
+    <div 
+      className="rain-bg-container"
+      style={{
+        backgroundImage: `url(${loginBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+        minHeight: '100vh',
+        width: '100vw',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        backgroundColor: '#080C14'
+      }}
+    >
       <div className={`animated-auth-container ${isRegistering ? 'active' : ''}`}>
         
         <div className="curved-shaped"></div>
