@@ -5,9 +5,10 @@ import { useAuthStore } from '../stores/authStore';
 import { apiClient } from '../api/client';
 import { 
   User, GraduationCap, Target, Wrench, Save, Plus, Trash2, 
-  Search, CheckCircle, ChevronDown, ChevronUp, Loader2, UploadCloud,
+  Search, CheckCircle, ChevronDown, ChevronUp, Loader2,
   Globe, Code2, HelpCircle, CheckCheck, AlertCircle
 } from 'lucide-react';
+import { CyberResumeUpload } from '../components/profile/CyberResumeUpload';
 
 function Section({ title, icon, children, badge }: { title: string; icon: React.ReactNode; children: React.ReactNode; badge?: string }) {
   const [open, setOpen] = useState(true);
@@ -314,9 +315,7 @@ export default function Profile() {
     }
   };
 
-  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleResumeFile = async (file: File) => {
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       setResumeError('Please select a valid PDF file.');
       return;
@@ -378,7 +377,6 @@ export default function Profile() {
       setResumeError(err.response?.data?.detail || err.response?.data?.message || 'Failed to parse resume PDF.');
     } finally {
       setUploadingResume(false);
-      e.target.value = '';
     }
   };
 
@@ -488,61 +486,11 @@ export default function Profile() {
         </div>
       )}
 
-      {/* PDF Resume Ingestion Hero */}
-      <div 
-        className="card"
-        style={{
-          background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(17, 24, 39, 0.6) 100%)',
-          border: '1px dashed rgba(37, 99, 235, 0.35)',
-          padding: '1.5rem',
-          borderRadius: 'var(--radius-lg)',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1.25rem'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '280px' }}>
-          <div style={{
-            width: '48px', height: '48px', borderRadius: 'var(--radius-md)',
-            background: 'rgba(37, 99, 235, 0.1)', border: '1px solid rgba(37, 99, 235, 0.25)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-          }}>
-            <UploadCloud size={24} color="var(--accent-primary)" />
-          </div>
-          <div>
-            <h3 style={{ margin: '0 0 0.2rem 0', fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Automated Resume Parser & Evidence Extractor
-            </h3>
-            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-              Upload your PDF resume to auto-fill links, academic trajectory, and technical skills for your review.
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <label 
-            className="btn btn-primary"
-            style={{
-              cursor: uploadingResume ? 'not-allowed' : 'pointer',
-              display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
-              padding: '0.5rem 1.15rem', fontSize: '0.8125rem',
-            }}
-          >
-            {uploadingResume ? <Loader2 size={15} className="spin" /> : <UploadCloud size={15} />}
-            <span>{uploadingResume ? 'Extracting Evidence...' : 'Upload PDF Resume'}</span>
-            <input 
-              type="file" 
-              accept=".pdf" 
-              disabled={uploadingResume} 
-              onChange={handleResumeUpload} 
-              style={{ display: 'none' }} 
-            />
-          </label>
-        </div>
-      </div>
+      {/* Cyber Holographic Resume & Evidence Ingestion Vault */}
+      <CyberResumeUpload 
+        onFileSelect={handleResumeFile} 
+        uploading={uploadingResume} 
+      />
 
       {resumeError && (
         <div style={{

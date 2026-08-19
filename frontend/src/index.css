@@ -1763,6 +1763,386 @@ button.toggle-btn:focus:active {
   left: 0;
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+   CYBER HOLOGRAPHIC RESUME & EVIDENCE UPLOAD VAULT
+   ════════════════════════════════════════════════════════════════════════ */
+
+.cyber-upload-card {
+  --neon-cyan: #38BDF8;
+  --neon-blue: #2563EB;
+  --neon-purple: #818CF8;
+  --cyber-glass: rgba(15, 23, 42, 0.68);
+  --cyber-border: rgba(56, 189, 248, 0.28);
+  --cyber-glow: rgba(56, 189, 248, 0.18);
+
+  position: relative;
+  width: 100%;
+  background: var(--cyber-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px dashed var(--cyber-border);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.75rem;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 32px rgba(0, 0, 0, 0.35);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.cyber-upload-card:hover,
+.cyber-upload-card.drag-active {
+  border-color: var(--neon-cyan);
+  border-style: solid;
+  box-shadow: 
+    0 0 35px rgba(37, 99, 235, 0.3),
+    inset 0 0 24px rgba(56, 189, 248, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.cyber-upload-card.drag-active {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: #60A5FA;
+  box-shadow: 0 0 45px rgba(56, 189, 248, 0.45);
+}
+
+.cyber-hidden-input {
+  display: none;
+}
+
+/* Ambient Cyber Laser Scan Sweep */
+.cyber-laser-sweep {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--neon-cyan) 50%, transparent 100%);
+  box-shadow: 0 0 16px var(--neon-cyan);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cyber-upload-card:hover .cyber-laser-sweep,
+.cyber-upload-card.drag-active .cyber-laser-sweep {
+  opacity: 1;
+  animation: cyberLaserScan 2.4s infinite linear;
+}
+
+@keyframes cyberLaserScan {
+  0% { top: 0%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* Top Badge & Headers */
+.cyber-badge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  position: relative;
+  z-index: 2;
+}
+
+.cyber-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--neon-cyan);
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-sm);
+}
+
+.cyber-format-pill {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Inner Layout */
+.cyber-upload-inner {
+  display: flex;
+  align-items: center;
+  gap: 2.25rem;
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 680px) {
+  .cyber-upload-inner {
+    flex-direction: column;
+    text-align: center;
+    gap: 1.5rem;
+  }
+}
+
+/* ── Holographic Cyber Folder System ── */
+.cyber-folder-system {
+  position: relative;
+  width: 110px;
+  height: 85px;
+  flex-shrink: 0;
+  animation: cyberFloat 4s ease-in-out infinite;
+}
+
+@keyframes cyberFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.cyber-folder-back {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 72px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 8px 12px 10px 10px;
+  box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.15), 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+
+.cyber-folder-tab {
+  position: absolute;
+  top: -10px;
+  left: 8px;
+  width: 38px;
+  height: 12px;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+}
+
+/* Floating Cyber Papers */
+.cyber-papers {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.cyber-paper {
+  position: absolute;
+  bottom: 8px;
+  width: 48px;
+  height: 60px;
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 4px;
+  padding: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.file-left {
+  left: 14px;
+  transform: rotate(-6deg) translateY(0);
+}
+
+.file-right {
+  right: 14px;
+  transform: rotate(6deg) translateY(0);
+}
+
+.cyber-paper-chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 2px;
+}
+
+.chip-text {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--neon-cyan);
+}
+
+.cyber-code-line {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.line-cyan { background: var(--neon-cyan); box-shadow: 0 0 4px var(--neon-cyan); }
+.line-purple { background: var(--neon-purple); box-shadow: 0 0 4px var(--neon-purple); }
+.line-short { width: 65%; }
+.line-micro { width: 40%; }
+
+/* Front Glass Flap */
+.cyber-folder-front {
+  position: absolute;
+  bottom: -2px;
+  left: -2px;
+  width: calc(100% + 4px);
+  height: 58px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(30, 41, 59, 0.75) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  border-radius: 8px 8px 10px 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  z-index: 3;
+  transform-origin: bottom center;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cyber-front-scanner {
+  width: 24px;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.scanner-light {
+  width: 8px;
+  height: 100%;
+  background: var(--neon-cyan);
+  box-shadow: 0 0 8px var(--neon-cyan);
+  animation: scannerSweep 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes scannerSweep {
+  0% { transform: translateX(-4px); }
+  100% { transform: translateX(18px); }
+}
+
+/* Floating Sparkle Particles */
+.cyber-decor {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+  z-index: 4;
+}
+
+.sparkle-top {
+  top: -12px;
+  right: -6px;
+  transform: scale(0);
+}
+
+.sparkle-bottom {
+  bottom: -8px;
+  left: -8px;
+  transform: scale(0);
+}
+
+/* ── Interactive Hover State Mechanics ── */
+.cyber-upload-card:hover .cyber-folder-front,
+.cyber-upload-card.is-hovered .cyber-folder-front,
+.cyber-upload-card.drag-active .cyber-folder-front {
+  transform: scaleY(0.75) skewX(-5deg);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.28) 0%, rgba(30, 41, 59, 0.85) 100%);
+}
+
+.cyber-upload-card:hover .file-left,
+.cyber-upload-card.is-hovered .file-left,
+.cyber-upload-card.drag-active .file-left {
+  transform: rotate(-14deg) translateY(-26px);
+}
+
+.cyber-upload-card:hover .file-right,
+.cyber-upload-card.is-hovered .file-right,
+.cyber-upload-card.drag-active .file-right {
+  transform: rotate(16deg) translateY(-20px);
+}
+
+.cyber-upload-card:hover .cyber-decor,
+.cyber-upload-card.is-hovered .cyber-decor,
+.cyber-upload-card.drag-active .cyber-decor {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+/* ── Content Details ── */
+.cyber-upload-content {
+  flex: 1;
+}
+
+.cyber-upload-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.3rem;
+  letter-spacing: -0.01em;
+}
+
+.cyber-upload-title.active-pulse {
+  color: var(--neon-cyan);
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+}
+
+.cyber-upload-subtext {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  line-height: 1.45;
+}
+
+.cyber-cta-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cyber-upload-btn {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
+  transition: all var(--transition-fast);
+}
+
+.cyber-upload-card:hover .cyber-upload-btn,
+.cyber-upload-card.is-hovered .cyber-upload-btn {
+  box-shadow: 0 0 28px rgba(56, 189, 248, 0.6);
+  transform: translateY(-1px);
+}
+
+.cyber-sub-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.cyber-loading-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
 
 
 
