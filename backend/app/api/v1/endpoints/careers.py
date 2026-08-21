@@ -19,6 +19,8 @@ from app.db.session import get_db
 from app.repositories.twin_repositories import CareerRepository
 from app.schemas.career import CareerCreate, CareerRead, CareerSummaryRead, CareerUpdate
 
+from app.core.cache import catalog_cache
+
 router = APIRouter(prefix="/careers", tags=["Careers"])
 
 
@@ -29,6 +31,14 @@ async def list_careers(
     limit: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
+    cache_key = f"careers_list:{q}:{category}:{limit}"
+    cached_data = await catalog_cache.get(cache_key)
+    if cached_data is not None:
+        return success_response(
+            data=cached_data,
+            message=f"Found {len(cached_data)} careers (cached).",
+        )
+
     repo = CareerRepository(session)
     if q:
         careers = await repo.search(q, category=category, limit=limit)
@@ -36,8 +46,12 @@ async def list_careers(
         careers = await repo.get_by_category(category, limit=limit)
     else:
         careers = await repo.get_all_active(limit=limit)
+    
+    result_data = [CareerSummaryRead.model_validate(c).model_dump(mode="json") for c in careers]
+    await catalog_cache.set(cache_key, result_data, ttl_seconds=600)
+
     return success_response(
-        data=[CareerSummaryRead.model_validate(c).model_dump(mode="json") for c in careers],
+        data=result_data,
         message=f"Found {len(careers)} careers.",
     )
 
@@ -47,13 +61,25 @@ async def get_career(
     career_id: uuid.UUID,
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
+    cache_key = f"career_detail:{career_id}"
+    cached_data = await catalog_cache.get(cache_key)
+    if cached_data is not None:
+        return success_response(
+            data=cached_data,
+            message="Career retrieved (cached).",
+        )
+
     repo = CareerRepository(session)
     career = await repo.get_by_id(career_id)
     if not career:
         from app.core.exceptions import NotFoundException
         raise NotFoundException(message="Career not found.")
+    
+    result_data = CareerRead.model_validate(career).model_dump(mode="json")
+    await catalog_cache.set(cache_key, result_data, ttl_seconds=600)
+
     return success_response(
-        data=CareerRead.model_validate(career).model_dump(mode="json"),
+        data=result_data,
         message="Career retrieved.",
     )
 
@@ -78,6 +104,7 @@ async def create_career(
     career = Career(**payload.model_dump())
     created = await repo.create(career)
     await session.commit()
+    await catalog_cache.invalidate()
     return success_response(
         data=CareerRead.model_validate(created).model_dump(mode="json"),
         message="Career added to catalog.",
@@ -106,6 +133,7 @@ async def update_career(
 
     await session.commit()
     await session.refresh(career)
+    await catalog_cache.invalidate()
     return success_response(
         data=CareerRead.model_validate(career).model_dump(mode="json"),
         message="Career updated.",

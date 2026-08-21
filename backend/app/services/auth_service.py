@@ -33,6 +33,11 @@ from app.repositories.user_repository import RefreshTokenRepository, UserReposit
 from app.schemas.auth import TokenResponse
 
 logger = structlog.get_logger(__name__)
+# ── Account Lockout Tracker ──────────────────────────────────────────
+# Locks accounts after 5 failed password attempts for 15 minutes.
+_failed_login_log: dict[str, list[float]] = {}
+MAX_FAILED_LOGIN_ATTEMPTS = 5
+LOCKOUT_WINDOW_SECONDS = 900  # 15 minutes
 
 
 class AuthService:
@@ -110,7 +115,11 @@ class AuthService:
         # Generate tokens
         return await self._generate_token_pair(user)
 
-    async def login(self, email: str, password: str) -> TokenResponse:
+    async def login(
+        self,
+        email: str,
+        password: str,
+    ) -> TokenResponse:
         """
         Authenticate a user and return tokens.
 
@@ -122,11 +131,25 @@ class AuthService:
             JWT token pair (access + refresh).
 
         Raises:
-            UnauthorizedException: If credentials are invalid.
+            UnauthorizedException: If credentials are invalid or account is locked.
         """
+        email_key = email.lower().strip()
+        now_ts = datetime.now(UTC).timestamp()
+
+        # Check account lockout status
+        attempts = [t for t in _failed_login_log.get(email_key, []) if now_ts - t < LOCKOUT_WINDOW_SECONDS]
+        _failed_login_log[email_key] = attempts
+        if len(attempts) >= MAX_FAILED_LOGIN_ATTEMPTS:
+            remaining_mins = max(1, int((LOCKOUT_WINDOW_SECONDS - (now_ts - attempts[0])) / 60))
+            logger.warning("account_locked_failed_attempts", email=email_key, attempts=len(attempts))
+            raise UnauthorizedException(
+                message=f"Too many failed login attempts. Account temporarily locked for {remaining_mins} minutes for your security."
+            )
+
         # Fetch user
         user = await self._user_repo.get_by_email(email)
         if user is None:
+            _failed_login_log[email_key].append(now_ts)
             raise UnauthorizedException(message="Invalid email or password.")
 
         # Check account status
@@ -138,7 +161,11 @@ class AuthService:
             verify_password, password, user.hashed_password
         )
         if not is_valid:
+            _failed_login_log[email_key].append(now_ts)
             raise UnauthorizedException(message="Invalid email or password.")
+
+        # Clear failed attempts upon successful login
+        _failed_login_log.pop(email_key, None)
 
         # Update last login
         await self._user_repo.update_last_login(user.id)

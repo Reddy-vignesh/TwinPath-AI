@@ -27,6 +27,19 @@ from app.core.constants import (
 # ── Create / Update ───────────────────────────────────────────────
 
 
+import re
+
+def _sanitize_xss(text: str | None) -> str | None:
+    """Strips all HTML tags and script injections from free-form user inputs."""
+    if not text:
+        return text
+    # Remove HTML tags
+    cleaned = re.sub(r"<[^>]*?>", "", text)
+    # Remove javascript: or vbscript: pseudoprotocols
+    cleaned = re.sub(r"(?i)javascript:|vbscript:", "", cleaned)
+    return cleaned.strip()
+
+
 class ProfileCreate(BaseModel):
     """Fields for creating a new student profile."""
 
@@ -49,6 +62,17 @@ class ProfileCreate(BaseModel):
     preferred_industry: str | None = Field(None, max_length=TITLE_MAX_LENGTH)
     willing_to_relocate: bool | None = None
     preferred_work_style: str | None = Field(None, max_length=50)
+
+    @field_validator(
+        "bio", "location", "highest_degree", "current_major", 
+        "current_university", "career_goal_primary", "career_goal_secondary", "preferred_industry",
+        mode="before"
+    )
+    @classmethod
+    def sanitize_xss_fields(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return _sanitize_xss(v)
+        return v
 
 
 class ProfileUpdate(BaseModel):
@@ -73,6 +97,17 @@ class ProfileUpdate(BaseModel):
     preferred_industry: str | None = None
     willing_to_relocate: bool | None = None
     preferred_work_style: str | None = None
+
+    @field_validator(
+        "bio", "location", "highest_degree", "current_major", 
+        "current_university", "career_goal_primary", "career_goal_secondary", "preferred_industry",
+        mode="before"
+    )
+    @classmethod
+    def sanitize_xss_fields(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return _sanitize_xss(v)
+        return v
 
     @field_validator("current_cgpa")
     @classmethod

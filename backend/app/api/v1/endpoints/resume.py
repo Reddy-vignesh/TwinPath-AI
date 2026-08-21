@@ -33,11 +33,31 @@ async def upload_resume(
     Parse an uploaded PDF resume, extract links, academics, bio, and matching skills.
     Returns structured data for the user to verify, edit, and save freely.
     """
+    # 1. Extension Check & Filename Sanitization
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 
+    sanitized_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', file.filename)
+
     try:
         contents = await file.read()
+        
+        # 2. Maximum File Size Limit (10MB ceiling)
+        MAX_FILE_SIZE = 10 * 1024 * 1024
+        if len(contents) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large ({round(len(contents) / (1024*1024), 1)}MB). Maximum allowed size is 10MB.",
+            )
+
+        # 3. Magic-Byte Header Verification (must start with %PDF-)
+        if not contents.startswith(b"%PDF-"):
+            logger.warning("invalid_pdf_magic_bytes_detected", filename=sanitized_name, size=len(contents))
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid file content. The uploaded file is not a valid PDF document.",
+            )
+
         pdf_file = io.BytesIO(contents)
         reader = PdfReader(pdf_file)
         

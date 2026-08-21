@@ -152,21 +152,42 @@ def load_blocklist() -> None:
     )
 
 
+import socket
+
+def has_valid_domain_dns(domain: str) -> bool:
+    """
+    Verify that the domain has valid DNS routing records.
+    Uses socket.getaddrinfo to test host resolution.
+    """
+    try:
+        # Check domain resolution
+        socket.getaddrinfo(domain, 80, proto=socket.IPPROTO_TCP)
+        return True
+    except (socket.gaierror, socket.herror, Exception):
+        return False
+
+
 def is_disposable_email(email: str) -> bool:
     """
-    Return True if the email should be BLOCKED (not from an allowed provider).
+    Return True if the email should be BLOCKED (not from an allowed provider or broken domain).
 
     Args:
         email: Full email address (e.g. 'user@gmail.com')
 
     Returns:
-        True  → email domain is NOT on the allowlist → BLOCK registration
-        False → email domain IS on the allowlist     → ALLOW registration
+        True  → email domain is NOT on the allowlist or invalid → BLOCK registration
+        False → email domain IS valid and on allowlist           → ALLOW registration
     """
     try:
         domain = email.strip().lower().split("@")[-1]
     except Exception:
         return True  # Block on parse failure
+
+    # Block obvious typos of common domains
+    common_typos = {"gmaill.com", "gmai.com", "yaho.co", "hotmial.com", "outlok.com"}
+    if domain in common_typos:
+        logger.info("Blocked typo email domain", domain=domain)
+        return True
 
     # Check against exact allowed domains
     if domain in _ALLOWED_DOMAINS:
@@ -175,7 +196,12 @@ def is_disposable_email(email: str) -> bool:
     # Check against educational TLD suffixes
     for suffix in _ALLOWED_EDU_SUFFIXES:
         if domain.endswith(suffix):
-            return False  # Allowed (educational institution)
+            # Verify DNS exists for the university domain
+            if has_valid_domain_dns(domain):
+                return False  # Allowed (verified educational institution)
+            else:
+                logger.info("Blocked unresolvable educational domain", domain=domain)
+                return True
 
     # Not in any allowed list → block
     logger.info("Blocked non-allowlisted email domain", domain=domain)
