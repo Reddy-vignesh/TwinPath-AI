@@ -28,6 +28,10 @@ export default function Login() {
   const [activeModal, setActiveModal] = useState<'none' | 'otp' | 'guest' | 'forgot_email' | 'forgot_otp'>('none');
   const [otpCode, setOtpCode] = useState('');
   
+  // Anti-bot security telemetry
+  const [formTs] = useState<number>(() => Date.now());
+  const [honeypot, setHoneypot] = useState('');
+  
   // Forgot password states
   const [forgotEmail, setForgotEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -196,7 +200,9 @@ export default function Login() {
         email,
         password,
         first_name,
-        last_name
+        last_name,
+        website_url: honeypot || undefined,
+        form_ts: formTs,
       });
 
       return response.data.data || response.data;
@@ -212,6 +218,8 @@ export default function Login() {
       const response = await apiClient.post('/auth/login', {
         email,
         password,
+        website_url: honeypot || undefined,
+        form_ts: formTs,
       });
 
       return response.data.data || response.data;
@@ -298,6 +306,18 @@ export default function Login() {
         <div className="form-box Login">
           <h2 className="animation" style={{ '--D': 0, '--S': 21 } as React.CSSProperties}>TwinPath AI - Login</h2>
           <form onSubmit={handleLoginSubmit}>
+            {/* Invisible Anti-Bot Honeypot Trap */}
+            <div style={{ display: 'none', opacity: 0, position: 'absolute', left: '-9999px' }} aria-hidden="true">
+              <input
+                type="text"
+                name="website_url"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
+
             <div className="input-box animation" style={{ '--D': 1, '--S': 22 } as React.CSSProperties}>
               <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
               {renderWaveLabel('Email Address')}
@@ -405,6 +425,18 @@ export default function Login() {
         <div className="form-box Register">
           <h2 className="animation" style={{ '--li': 17, '--S': 0 } as React.CSSProperties}>Register</h2>
           <form onSubmit={handleRegisterSubmit}>
+            {/* Invisible Anti-Bot Honeypot Trap */}
+            <div style={{ display: 'none', opacity: 0, position: 'absolute', left: '-9999px' }} aria-hidden="true">
+              <input
+                type="text"
+                name="website_url"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
+
             <div className="input-box animation" style={{ '--li': 18, '--S': 1 } as React.CSSProperties}>
               <input type="text" required value={username} onChange={(e) => setUsername(e.target.value)} />
               {renderWaveLabel('Full Name')}

@@ -11,6 +11,7 @@ All endpoints return consistent response envelopes.
 
 from app.schemas.auth import ResetPasswordRequest, VerifyOTPRequest, SendOTPRequest
 from app.core.disposable_email import is_disposable_email
+from app.core.bot_protection import verify_bot_shield
 
 from typing import Any
 import structlog
@@ -192,12 +193,15 @@ async def google_login(
     status_code=201,
 )
 async def register(
+    request: Request,
     payload: RegisterRequest,
     response: Response,
     settings: Settings = Depends(get_settings),
     auth_service: AuthService = Depends(_get_auth_service),
 ) -> dict[str, Any]:
     """Register a new user and return an access/refresh token pair."""
+    await verify_bot_shield(request, payload.model_dump())
+
     # Block disposable/temporary email addresses
     if is_disposable_email(payload.email):
         from app.core.exceptions import BadRequestException
@@ -224,12 +228,15 @@ async def register(
     description="Authenticate with email and password. Returns JWT tokens.",
 )
 async def login(
+    request: Request,
     payload: LoginRequest,
     response: Response,
     settings: Settings = Depends(get_settings),
     auth_service: AuthService = Depends(_get_auth_service),
 ) -> dict[str, Any]:
     """Authenticate user credentials and return tokens."""
+    await verify_bot_shield(request, payload.model_dump())
+
     # Direct routing for Showcase Demo account credentials
     if payload.email.lower() in ["demo@decisiontwin.ai", "demo@example.com", "demo@twinpath.ai"]:
         token_response = await auth_service.showcase_demo_login()

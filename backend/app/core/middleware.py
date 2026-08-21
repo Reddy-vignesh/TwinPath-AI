@@ -74,19 +74,47 @@ def register_middleware(app: FastAPI, settings: Settings) -> None:
         response.headers["X-Process-Time"] = f"{elapsed_ms:.2f}ms"
         return response
 
-    # ── Security Response Headers ──────────────────────────────
+    # ── HTTPS Enforcement & Security Response Headers ──────────
     @app.middleware("http")
     async def security_headers_middleware(
         request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
+        # 1. Force HTTPS in production / proxy
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+        if (settings.app_env == "production" or forwarded_proto == "http") and request.url.scheme == "http" and forwarded_proto != "https":
+            if not request.url.hostname in ("localhost", "127.0.0.1"):
+                https_url = request.url.replace(scheme="https")
+                return JSONResponse(
+                    status_code=status.HTTP_308_PERMANENT_REDIRECT,
+                    headers={"Location": str(https_url)},
+                    content={"message": "Redirecting to HTTPS"},
+                )
+
+        # 2. CSRF Origin Protection on state-changing methods
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            origin = request.headers.get("origin")
+            if origin and settings.app_env == "production":
+                # Ensure origin matches configured CORS allowlist
+                if origin not in settings.cors_origin_list:
+                    return JSONResponse(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        content=error_response(
+                            message="Cross-Origin Request Blocked by CSRF Shield."
+                        ),
+                    )
+
         response = await call_next(request)
+        
+        # 3. Security Response Headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
-        response.headers["Cache-Control"] = "no-store"
-        # HSTS — only set in production (not over HTTP in dev)
-        if request.url.scheme == "https":
+        response.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https:;"
+        
+        # 4. Strict-Transport-Security (HSTS)
+        if request.url.scheme == "https" or forwarded_proto == "https" or settings.app_env == "production":
             response.headers["Strict-Transport-Security"] = (
                 "max-age=63072000; includeSubDomains; preload"
             )

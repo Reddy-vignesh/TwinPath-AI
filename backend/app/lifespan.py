@@ -77,11 +77,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Load disposable email blocklist into memory
     load_blocklist()
 
+    # Launch automated daily database backup task
+    import asyncio
+    from app.services.backup_service import start_periodic_backups
+    backup_task = asyncio.create_task(start_periodic_backups())
+
     logger.info("Application startup complete")
 
     yield
 
     # ── Shutdown ───────────────────────────────────────────────
     logger.info("Shutting down Decision Twin AI")
+    backup_task.cancel()
+    try:
+        await backup_task
+    except (asyncio.CancelledError, Exception):
+        pass
     await dispose_engine()
     logger.info("Database engine disposed, shutdown complete")

@@ -10,12 +10,46 @@ from __future__ import annotations
 import logging
 import logging.config
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
-if TYPE_CHECKING:
-    pass
+SENSITIVE_KEYS = {
+    "password",
+    "plain_password",
+    "hashed_password",
+    "token",
+    "access_token",
+    "refresh_token",
+    "secret",
+    "jwt_secret_key",
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "otp",
+    "code",
+    "api_key",
+    "brevo_api_key",
+    "smtp_password",
+    "postgres_password",
+}
+
+
+def redact_sensitive_data(_logger: Any, _name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    """
+    Recursively redact sensitive data (passwords, tokens, API keys, OTPs) from logs.
+    """
+    def _sanitize(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                k: "[REDACTED]" if str(k).lower() in SENSITIVE_KEYS or any(s in str(k).lower() for s in ("password", "secret", "token", "otp", "api_key")) else _sanitize(v)
+                for k, v in value.items()
+            }
+        elif isinstance(value, list):
+            return [_sanitize(item) for item in value]
+        return value
+
+    return _sanitize(event_dict)
 
 
 def configure_logging(log_level: str = "INFO") -> None:
@@ -34,6 +68,7 @@ def configure_logging(log_level: str = "INFO") -> None:
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
         structlog.stdlib.ExtraAdder(),
+        redact_sensitive_data,
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.UnicodeDecoder(),

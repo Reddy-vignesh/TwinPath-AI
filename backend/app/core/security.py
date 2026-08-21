@@ -41,7 +41,7 @@ def hash_password(plain_password: str) -> str:
     Returns:
         The bcrypt hash string.
     """
-    salt = bcrypt.gensalt(rounds=10)
+    salt = bcrypt.gensalt(rounds=12)
     hashed_bytes = bcrypt.hashpw(plain_password.encode("utf-8"), salt)
     return hashed_bytes.decode("utf-8")
 
@@ -166,6 +166,7 @@ def decode_token(
             token,
             settings.jwt_secret_key,
             algorithms=[settings.jwt_algorithm],
+            options={"require": ["exp", "sub", "type"]},
         )
     except jwt.ExpiredSignatureError:
         raise UnauthorizedException(message="Token has expired.")

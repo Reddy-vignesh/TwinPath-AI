@@ -48,6 +48,22 @@ class RegisterRequest(BaseModel):
         description="User last name",
         examples=["Doe"],
     )
+    website_url: str | None = Field(
+        default=None,
+        description="Anti-bot honeypot trap. Must be left empty.",
+    )
+    form_ts: int | float | None = Field(
+        default=None,
+        description="Form initiation timestamp for anti-bot timing check",
+    )
+
+    @field_validator("website_url")
+    @classmethod
+    def validate_honeypot(cls, value: str | None) -> str | None:
+        """Reject automated submissions that fill out the honeypot field."""
+        if value:
+            raise ValueError("Automated bot submission detected.")
+        return value
 
     @field_validator("email")
     @classmethod
@@ -165,6 +181,22 @@ class LoginRequest(BaseModel):
         max_length=PASSWORD_MAX_LENGTH,
         description="Account password",
     )
+    website_url: str | None = Field(
+        default=None,
+        description="Anti-bot honeypot trap. Must be left empty.",
+    )
+    form_ts: int | float | None = Field(
+        default=None,
+        description="Form initiation timestamp for anti-bot timing check",
+    )
+
+    @field_validator("website_url")
+    @classmethod
+    def validate_honeypot(cls, value: str | None) -> str | None:
+        """Reject automated submissions that fill out the honeypot field."""
+        if value:
+            raise ValueError("Automated bot submission detected.")
+        return value
 
 
 class RefreshTokenRequest(BaseModel):
