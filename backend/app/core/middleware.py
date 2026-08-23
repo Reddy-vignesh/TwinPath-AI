@@ -49,9 +49,9 @@ def register_middleware(app: FastAPI, settings: Settings) -> None:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
+        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        # Explicit allowlist — never use ["*"] as it enables header injection
         allow_headers=[
             "Authorization",
             "Content-Type",
@@ -59,6 +59,10 @@ def register_middleware(app: FastAPI, settings: Settings) -> None:
             "X-Requested-With",
             "Accept",
             "Origin",
+            "User-Agent",
+            "Referer",
+            "Cache-Control",
+            "Pragma",
         ],
         expose_headers=["X-Correlation-ID", "X-Process-Time"],
     )
