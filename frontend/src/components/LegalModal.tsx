@@ -127,11 +127,11 @@ export const LegalModal: React.FC<LegalModalProps> = ({
           }}
         >
           {[
-            { id: 'privacy', label: 'Privacy Policy', icon: Shield },
+            { id: 'privacy', label: 'Privacy Policy (GDPR/DPDP)', icon: Shield },
             { id: 'terms', label: 'Terms & Conditions', icon: FileText },
-            { id: 'cookies', label: 'Cookie Policy', icon: Cookie },
-            { id: 'disclaimer', label: 'AI Disclaimer', icon: AlertTriangle },
-            { id: 'contact', label: 'Contact & Grievance', icon: Mail },
+            { id: 'cookies', label: 'Cookie & Session Policy', icon: Cookie },
+            { id: 'disclaimer', label: 'AI Disclaimer & Governance', icon: AlertTriangle },
+            { id: 'contact', label: 'Official Contact & Grievance', icon: Mail },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -175,7 +175,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         >
           {activeTab === 'privacy' && (
             <div>
-              <h3 style={{ color: '#fff', marginTop: 0, fontSize: '1.15rem' }}>1. Privacy Policy (GDPR / CCPA / DPDP Aligned)</h3>
+              <h3 style={{ color: '#fff', marginTop: 0, fontSize: '1.15rem' }}>1. Privacy Policy (GDPR / CCPA / DPDP)</h3>
               <p>
                 <strong>TwinPath AI</strong> is committed to safeguarding the confidentiality of your academic, skill, and career trajectory data.
               </p>
@@ -268,7 +268,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
           {activeTab === 'disclaimer' && (
             <div>
-              <h3 style={{ color: '#fff', marginTop: 0, fontSize: '1.15rem' }}>4. AI Decision Intelligence Disclaimer</h3>
+              <h3 style={{ color: '#fff', marginTop: 0, fontSize: '1.15rem' }}>4. AI Disclaimer & Governance</h3>
               <div style={{ padding: '14px 18px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '12px', color: '#fbbf24', marginBottom: '1.25rem' }}>
                 ⚠️ <strong>Important Career Simulation Advisory:</strong> TwinPath AI provides algorithmic decision intelligence, probabilistic career trajectories, and salary modeling based on statistical datasets and vector similarity.
               </div>
