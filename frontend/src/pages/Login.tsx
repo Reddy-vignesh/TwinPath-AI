@@ -7,7 +7,6 @@ import { X } from 'lucide-react';
 import Loader from '../components/Loader';
 import { ProjectInfoFloatingTrigger } from '../components/ProjectInfoModal';
 import { LegalModal, type LegalTab } from '../components/LegalModal';
-import { CookieBanner } from '../components/CookieBanner';
 import loginBg from '../assets/login-bg.jpg';
 
 export default function Login() {
@@ -499,10 +498,14 @@ export default function Login() {
               style={{
                 '--li': 20.5,
                 '--S': 3.5,
-                margin: '10px 0 14px 0',
+                margin: '12px 0 16px 0',
+                padding: '10px 12px',
+                background: 'rgba(15, 23, 42, 0.55)',
+                border: '1px solid rgba(56, 189, 248, 0.2)',
+                borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: '8px',
+                gap: '10px',
                 textAlign: 'left',
               } as React.CSSProperties}
             >
@@ -512,27 +515,73 @@ export default function Login() {
                 required
                 checked={termsAccepted}
                 onChange={(e) => setTermsAccepted(e.target.checked)}
-                style={{ marginTop: '3px', cursor: 'pointer', accentColor: '#38bdf8' }}
+                style={{
+                  marginTop: '2px',
+                  cursor: 'pointer',
+                  accentColor: '#38bdf8',
+                  width: '16px',
+                  height: '16px',
+                  flexShrink: 0,
+                }}
               />
-              <label htmlFor="terms-check" style={{ fontSize: '0.74rem', color: '#94a3b8', lineHeight: 1.35, cursor: 'pointer' }}>
+              <label
+                htmlFor="terms-check"
+                style={{
+                  fontSize: '0.78rem',
+                  color: '#cbd5e1',
+                  lineHeight: 1.45,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+              >
                 I agree to the{' '}
                 <span
-                  onClick={(e) => { e.preventDefault(); openLegal('terms'); }}
-                  style={{ color: '#38bdf8', textDecoration: 'underline', cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openLegal('terms');
+                  }}
+                  style={{
+                    color: '#38bdf8',
+                    fontWeight: 600,
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    textUnderlineOffset: '2px',
+                  }}
                 >
-                  Terms
+                  Terms of Service
                 </span>
                 ,{' '}
                 <span
-                  onClick={(e) => { e.preventDefault(); openLegal('privacy'); }}
-                  style={{ color: '#38bdf8', textDecoration: 'underline', cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openLegal('privacy');
+                  }}
+                  style={{
+                    color: '#38bdf8',
+                    fontWeight: 600,
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    textUnderlineOffset: '2px',
+                  }}
                 >
                   Privacy Policy
                 </span>
                 , &{' '}
                 <span
-                  onClick={(e) => { e.preventDefault(); openLegal('disclaimer'); }}
-                  style={{ color: '#38bdf8', textDecoration: 'underline', cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openLegal('disclaimer');
+                  }}
+                  style={{
+                    color: '#38bdf8',
+                    fontWeight: 600,
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    textUnderlineOffset: '2px',
+                  }}
                 >
                   AI Disclaimer
                 </span>.
@@ -760,44 +809,41 @@ export default function Login() {
       <footer
         style={{
           position: 'fixed',
-          bottom: '12px',
+          bottom: '14px',
           left: '50%',
           transform: 'translateX(-50%)',
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          fontSize: '0.72rem',
+          gap: '14px',
+          fontSize: '0.74rem',
           color: '#64748b',
           zIndex: 10,
-          background: 'rgba(11, 15, 23, 0.65)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          padding: '6px 18px',
-          borderRadius: '20px',
+          background: 'rgba(11, 15, 23, 0.75)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          padding: '7px 22px',
+          borderRadius: '24px',
           border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.4)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
         }}
       >
-        <button onClick={() => openLegal('privacy')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>Privacy Policy</button>
-        <span>•</span>
-        <button onClick={() => openLegal('terms')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>Terms of Service</button>
-        <span>•</span>
-        <button onClick={() => openLegal('cookies')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>Cookie Policy</button>
-        <span>•</span>
-        <button onClick={() => openLegal('disclaimer')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>AI Disclaimer</button>
-        <span>•</span>
-        <button onClick={() => openLegal('contact')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>Contact</button>
+        <button onClick={() => openLegal('privacy')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', fontWeight: 500, padding: 0 }}>Privacy Policy</button>
+        <span style={{ opacity: 0.4 }}>•</span>
+        <button onClick={() => openLegal('terms')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', fontWeight: 500, padding: 0 }}>Terms of Service</button>
+        <span style={{ opacity: 0.4 }}>•</span>
+        <button onClick={() => openLegal('cookies')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', fontWeight: 500, padding: 0 }}>Cookie Policy</button>
+        <span style={{ opacity: 0.4 }}>•</span>
+        <button onClick={() => openLegal('disclaimer')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', fontWeight: 500, padding: 0 }}>AI Disclaimer</button>
+        <span style={{ opacity: 0.4 }}>•</span>
+        <button onClick={() => openLegal('contact')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', fontWeight: 500, padding: 0 }}>Contact</button>
       </footer>
 
-      {/* LEGAL & COMPLIANCE MODAL */}
+      {/* LEGAL & COMPLIANCE MODAL (Triggered on demand via footer or register link) */}
       <LegalModal
         isOpen={legalModalOpen}
         onClose={() => setLegalModalOpen(false)}
         initialTab={legalModalTab}
       />
-
-      {/* PRIVACY-FIRST COOKIE BANNER */}
-      <CookieBanner onOpenLegal={(tab) => openLegal(tab)} />
 
     </div>
   );
