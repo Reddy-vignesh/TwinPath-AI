@@ -537,9 +537,18 @@ class AuthService:
             expires_at=expires_at,
         )
 
+        user_dict = {
+            "id": str(user.id),
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "role": user.role,
+        }
+
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",
             expires_in=self._settings.access_token_expire_minutes * 60,
+            user=user_dict,
         )
