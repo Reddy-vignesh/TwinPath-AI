@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, FileText, Sparkles, Loader2, Cpu } from 'lucide-react';
+import { UploadCloud, FileText, Sparkles, Loader2, Cpu, ShieldCheck } from 'lucide-react';
 
 interface CyberResumeUploadProps {
   onFileSelect: (file: File) => void;
@@ -176,6 +176,28 @@ export const CyberResumeUpload: React.FC<CyberResumeUploadProps> = ({
             </>
           )}
         </div>
+      </div>
+
+      {/* Subtle Document & Sensitive Data Privacy Notice */}
+      <div
+        style={{
+          marginTop: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          fontSize: '0.74rem',
+          color: '#94a3b8',
+          padding: '6px 12px',
+          background: 'rgba(15, 23, 42, 0.4)',
+          borderRadius: '8px',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+        }}
+      >
+        <ShieldCheck size={14} color="#38bdf8" style={{ flexShrink: 0 }} />
+        <span>
+          <strong style={{ color: '#e2e8f0' }}>Confidential Processing:</strong> Uploaded resume PDFs are parsed in-memory strictly for AI twin calibration. Documents are never sold, shared, or indexed for public LLM training.
+        </span>
       </div>
     </div>
   );
