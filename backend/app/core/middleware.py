@@ -34,6 +34,10 @@ if TYPE_CHECKING:
 logger = structlog.get_logger(__name__)
 
 
+# Regex allowing all Render, Vercel, Netlify, and Localhost origins
+ALLOWED_ORIGIN_REGEX = r"^https?://([a-zA-Z0-9_-]+\.)*(onrender\.com|vercel\.app|netlify\.app|localhost|127\.0\.0\.1)(:\d+)?$"
+
+
 def register_middleware(app: FastAPI, settings: Settings) -> None:
     """
     Register all middleware on the FastAPI application.
@@ -45,11 +49,13 @@ def register_middleware(app: FastAPI, settings: Settings) -> None:
         app: FastAPI application instance.
         settings: Application settings.
     """
+    import re
+
     # ── CORS (outermost — must handle preflight first) ─────────
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
-        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+        allow_origin_regex=ALLOWED_ORIGIN_REGEX,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=[
@@ -97,9 +103,12 @@ def register_middleware(app: FastAPI, settings: Settings) -> None:
         # 2. CSRF Origin Protection on state-changing methods
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
             origin = request.headers.get("origin")
-            if origin and settings.app_env == "production":
-                # Ensure origin matches configured CORS allowlist
-                if origin not in settings.cors_origin_list:
+            if origin:
+                is_allowed_origin = (
+                    origin in settings.cors_origin_list
+                    or bool(re.match(ALLOWED_ORIGIN_REGEX, origin))
+                )
+                if not is_allowed_origin and settings.app_env == "production":
                     return JSONResponse(
                         status_code=status.HTTP_403_FORBIDDEN,
                         content=error_response(
