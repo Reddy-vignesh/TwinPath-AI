@@ -142,7 +142,8 @@ async def start_periodic_backups() -> None:
     """Background task to run automated daily database backups."""
     logger.info("automated_backup_service_initialized", retention_days=MAX_BACKUP_RETENTION)
     
-    # Run an initial snapshot on startup
+    # Defer initial snapshot by 30 seconds so container boot and initial logins are instantaneous
+    await asyncio.sleep(30)
     await asyncio.to_thread(create_database_backup)
 
     # Periodic 24-hour backup loop
