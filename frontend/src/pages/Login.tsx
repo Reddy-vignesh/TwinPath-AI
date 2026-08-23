@@ -6,6 +6,8 @@ import { apiClient } from '../api/client';
 import { X } from 'lucide-react';
 import Loader from '../components/Loader';
 import { ProjectInfoFloatingTrigger } from '../components/ProjectInfoModal';
+import { LegalModal, type LegalTab } from '../components/LegalModal';
+import { CookieBanner } from '../components/CookieBanner';
 import loginBg from '../assets/login-bg.jpg';
 
 export default function Login() {
@@ -31,6 +33,16 @@ export default function Login() {
   // Anti-bot security telemetry
   const [formTs] = useState<number>(() => Date.now());
   const [honeypot, setHoneypot] = useState('');
+
+  // Legal & Compliance Center states
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalTab>('privacy');
+  const [termsAccepted, setTermsAccepted] = useState(true);
+
+  const openLegal = (tab: LegalTab) => {
+    setLegalModalTab(tab);
+    setLegalModalOpen(true);
+  };
   
   // Forgot password states
   const [forgotEmail, setForgotEmail] = useState('');
@@ -122,6 +134,12 @@ export default function Login() {
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!termsAccepted) {
+      setError('Please accept the Terms of Service and Privacy Policy to create your account.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -134,28 +152,31 @@ export default function Login() {
     }
   };
 
-  // Helper to handle transition to dashboard with a minimum 3-second loader display
+  // Optimized transition to dashboard with instant responsiveness
   const transitionToDashboard = async (authCall: () => Promise<any>) => {
     setIsLoading(true);
     try {
-      // 1. Perform the authentication call (verifies credentials)
+      // 1. Perform the authentication call
       const tokenData = await authCall();
       
-      // 2. Auth succeeded! Show the premium entering loader immediately
+      // 2. Auth succeeded! Show entering animation briefly
       setIsEnteringWeb(true);
       
-      // 3. Keep loader visible for at least 1 full loop (3000ms)
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // 4. Set credentials in global store and fetch user profile
+      // 3. Set credentials in global store
+      const userObj = tokenData.user || null;
       setCredentials(
-        null,
+        userObj,
         tokenData.access_token,
         tokenData.refresh_token || ''
       );
-      await fetchUser();
+
+      // 4. Background non-blocking profile sync if user not returned directly
+      if (!userObj) {
+        fetchUser().catch(() => {});
+      }
       
-      // 5. Navigate to dashboard
+      // 5. Fast, smooth 200ms transition to dashboard
+      await new Promise(resolve => setTimeout(resolve, 200));
       navigate('/dashboard');
     } catch (err: any) {
       setIsEnteringWeb(false);
@@ -171,6 +192,8 @@ export default function Login() {
             msg = data.detail;
           }
         }
+      } else if (!err.response) {
+        msg = 'Cannot connect to server. Please check your network or server status.';
       }
       setError(msg);
     } finally {
@@ -470,6 +493,52 @@ export default function Login() {
                 </svg>
               </button>
             </div>
+            {/* Terms and Privacy Agreement Checkbox */}
+            <div
+              className="animation"
+              style={{
+                '--li': 20.5,
+                '--S': 3.5,
+                margin: '10px 0 14px 0',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                textAlign: 'left',
+              } as React.CSSProperties}
+            >
+              <input
+                type="checkbox"
+                id="terms-check"
+                required
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                style={{ marginTop: '3px', cursor: 'pointer', accentColor: '#38bdf8' }}
+              />
+              <label htmlFor="terms-check" style={{ fontSize: '0.74rem', color: '#94a3b8', lineHeight: 1.35, cursor: 'pointer' }}>
+                I agree to the{' '}
+                <span
+                  onClick={(e) => { e.preventDefault(); openLegal('terms'); }}
+                  style={{ color: '#38bdf8', textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  Terms
+                </span>
+                ,{' '}
+                <span
+                  onClick={(e) => { e.preventDefault(); openLegal('privacy'); }}
+                  style={{ color: '#38bdf8', textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  Privacy Policy
+                </span>
+                , &{' '}
+                <span
+                  onClick={(e) => { e.preventDefault(); openLegal('disclaimer'); }}
+                  style={{ color: '#38bdf8', textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  AI Disclaimer
+                </span>.
+              </label>
+            </div>
+
             <div className="animation" style={{ '--li': 21, '--S': 4 } as React.CSSProperties}>
               <button className="btn btn-primary" type="submit" disabled={isLoading} style={{ width: '100%', padding: '12px 20px', borderRadius: '12px', fontWeight: 600, fontSize: '0.95rem' }}>
                 {isLoading ? 'Creating Account...' : 'Register'}
@@ -686,6 +755,49 @@ export default function Login() {
           </div>
         </div>
       )}
+
+      {/* GLOBAL LEGAL FOOTER BAR */}
+      <footer
+        style={{
+          position: 'fixed',
+          bottom: '12px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          fontSize: '0.72rem',
+          color: '#64748b',
+          zIndex: 10,
+          background: 'rgba(11, 15, 23, 0.65)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          padding: '6px 18px',
+          borderRadius: '20px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.4)',
+        }}
+      >
+        <button onClick={() => openLegal('privacy')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>Privacy Policy</button>
+        <span>•</span>
+        <button onClick={() => openLegal('terms')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>Terms of Service</button>
+        <span>•</span>
+        <button onClick={() => openLegal('cookies')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>Cookie Policy</button>
+        <span>•</span>
+        <button onClick={() => openLegal('disclaimer')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>AI Disclaimer</button>
+        <span>•</span>
+        <button onClick={() => openLegal('contact')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>Contact</button>
+      </footer>
+
+      {/* LEGAL & COMPLIANCE MODAL */}
+      <LegalModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialTab={legalModalTab}
+      />
+
+      {/* PRIVACY-FIRST COOKIE BANNER */}
+      <CookieBanner onOpenLegal={(tab) => openLegal(tab)} />
 
     </div>
   );
