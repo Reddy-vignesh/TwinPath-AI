@@ -11,12 +11,14 @@ import {
   BrainCircuit,
   MessageSquarePlus,
   LogOut,
-  PanelLeftClose
+  PanelLeftClose,
+  ShieldCheck
 } from 'lucide-react';
 
 import { useAuthStore } from '../../stores/authStore';
 import TopBar from './TopBar';
 import FeedbackModal from '../FeedbackModal';
+import { LegalModal } from '../LegalModal';
 import PageLoader from '../PageLoader';
 import mainBg from '../../assets/main-bg.jpg';
 
@@ -39,6 +41,7 @@ export default function AppShell({ children }: AppShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
 
   // Persistent sidebar collapse state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
@@ -96,6 +99,9 @@ export default function AppShell({ children }: AppShellProps) {
 
       {/* Feedback Modal */}
       <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
+
+      {/* Legal & Compliance Modal */}
+      <LegalModal isOpen={isLegalOpen} onClose={() => setIsLegalOpen(false)} />
 
       {/* Linear-Grade Collapsible Sidebar */}
       <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
@@ -192,6 +198,22 @@ export default function AppShell({ children }: AppShellProps) {
           >
             <MessageSquarePlus size={16} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
             {!isSidebarCollapsed && <span className="sidebar-label">Feedback & Support</span>}
+          </button>
+
+          <button 
+            className="sidebar-nav-btn btn btn-secondary"
+            title="Privacy & Compliance"
+            style={{ 
+              width: '100%', 
+              fontSize: '0.8125rem',
+              padding: isSidebarCollapsed ? '0.55rem 0' : '0.45rem 0.75rem',
+              justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+              gap: isSidebarCollapsed ? '0' : '0.5rem'
+            }}
+            onClick={() => setIsLegalOpen(true)}
+          >
+            <ShieldCheck size={16} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+            {!isSidebarCollapsed && <span className="sidebar-label">Privacy & Legal</span>}
           </button>
 
           {/* User Account Tile */}
