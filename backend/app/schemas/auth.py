@@ -8,6 +8,7 @@ All inputs validated with Pydantic Field constraints.
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -231,3 +232,4 @@ class TokenResponse(BaseModel):
     refresh_token: str = Field(description="JWT refresh token")
     token_type: str = Field(default="bearer", description="Token type")
     expires_in: int = Field(description="Access token TTL in seconds")
+    user: dict[str, Any] | None = Field(default=None, description="Authenticated user object")
