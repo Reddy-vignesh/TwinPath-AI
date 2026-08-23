@@ -6,7 +6,8 @@ import { apiClient } from '../api/client';
 import { 
   User, GraduationCap, Target, Wrench, Save, Plus, Trash2, 
   Search, CheckCircle, ChevronDown, ChevronUp, Loader2,
-  Globe, Code2, HelpCircle, CheckCheck, AlertCircle
+  Globe, Code2, HelpCircle, CheckCheck, AlertCircle,
+  Download, ShieldCheck
 } from 'lucide-react';
 import { CyberResumeUpload } from '../components/profile/CyberResumeUpload';
 
@@ -128,6 +129,31 @@ export default function Profile() {
   const [uploadingResume, setUploadingResume] = useState(false);
   const [resumeSuccessBanner, setResumeSuccessBanner] = useState<string | null>(null);
   const [resumeError, setResumeError] = useState('');
+
+  // GDPR Data Portability State
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState('');
+
+  const handleExportData = async () => {
+    setIsExporting(true);
+    setExportMessage('');
+    try {
+      const response = await apiClient.get('/profiles/export-data');
+      const exportData = response.data.data || response.data;
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `twinpath_digital_twin_export_${new Date().toISOString().slice(0, 10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      setExportMessage('Digital Twin archive exported successfully!');
+    } catch {
+      setExportMessage('Export failed. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     fetchProfile();
@@ -1087,6 +1113,78 @@ export default function Profile() {
           </div>
         )}
       </Section>
+
+      {/* GDPR Data Sovereignty & Portability Card */}
+      <div
+        className="card"
+        style={{
+          background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.04) 0%, rgba(147, 51, 234, 0.04) 100%)',
+          border: '1px solid rgba(56, 189, 248, 0.25)',
+          padding: '1.25rem 1.5rem',
+          borderRadius: 'var(--radius-md)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          marginBottom: '1rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: '1 1 300px' }}>
+          <div
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '10px',
+              background: 'rgba(56, 189, 248, 0.15)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#38bdf8',
+              flexShrink: 0,
+            }}
+          >
+            <ShieldCheck size={22} />
+          </div>
+          <div>
+            <h4 style={{ margin: '0 0 0.2rem 0', color: 'var(--text-primary)', fontSize: '0.9375rem', fontWeight: 700 }}>
+              Data Sovereignty & GDPR Portability
+            </h4>
+            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
+              Download a complete JSON snapshot of your Digital Twin vector matrix, calibrated skills, and academic profile.
+            </p>
+            {exportMessage && (
+              <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, display: 'inline-block', marginTop: '4px' }}>
+                ✓ {exportMessage}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleExportData}
+          disabled={isExporting}
+          style={{
+            background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
+            border: 'none',
+            color: '#fff',
+            padding: '0.55rem 1.1rem',
+            borderRadius: 'var(--radius-md)',
+            fontWeight: 600,
+            fontSize: '0.8125rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: '0 4px 12px rgba(56, 189, 248, 0.25)',
+          }}
+        >
+          {isExporting ? <Loader2 size={14} className="spin" /> : <Download size={14} />}
+          <span>{isExporting ? 'Exporting Archive...' : 'Download My Data (JSON)'}</span>
+        </button>
+      </div>
 
       {/* Danger Zone: Account Deletion */}
       <div 
