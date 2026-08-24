@@ -49,7 +49,9 @@ class SkillRead(BaseModel):
 class UserSkillCreate(BaseModel):
     """Add a skill to a user profile."""
 
-    skill_id: UUID
+    skill_id: UUID | None = None
+    skill_name: str | None = None
+    category: str | None = None
     proficiency_level: int = Field(
         default=PROFICIENCY_MIN,
         ge=PROFICIENCY_MIN,
@@ -57,7 +59,7 @@ class UserSkillCreate(BaseModel):
     )
     years_experience: float | None = Field(None, ge=0)
     is_primary: bool = False
-    source: str | None = Field(None, max_length=50)
+    source: str | None = Field(None, max_length=100)
 
 
 class UserSkillUpdate(BaseModel):
