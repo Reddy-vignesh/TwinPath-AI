@@ -217,8 +217,113 @@ function CareerModal({ career, onClose }: { career: Career; onClose: () => void 
   );
 }
 
+const FALLBACK_CAREERS: Career[] = [
+  {
+    id: 'c1',
+    title: 'Machine Learning Engineer',
+    category: 'data_science',
+    short_description: 'Designs and builds production AI/ML models, neural pipelines, and scalable inference infrastructure.',
+    description: 'Specializes in training, fine-tuning, and deploying machine learning models to production systems.',
+    median_salary_usd: 150000,
+    salary_range_low: 110000,
+    salary_range_high: 220000,
+    market_demand: 'high',
+    growth_rate_percent: 24.5,
+    automation_risk_percent: 8.2,
+    required_skills: { Python: 9, PyTorch: 8, 'Machine Learning': 9, SQL: 7 },
+    preferred_skills: { Docker: 8, Kubernetes: 7, MLOps: 8 },
+    required_education: "Bachelor's / Master's",
+    typical_experience_years: 2,
+  },
+  {
+    id: 'c2',
+    title: 'Full Stack Software Engineer',
+    category: 'software_engineering',
+    short_description: 'Architects modern web applications from frontend interfaces to backend distributed microservices.',
+    description: 'Builds responsive user interfaces, REST/GraphQL APIs, and manages relational database architectures.',
+    median_salary_usd: 135000,
+    salary_range_low: 95000,
+    salary_range_high: 190000,
+    market_demand: 'high',
+    growth_rate_percent: 18.0,
+    automation_risk_percent: 12.0,
+    required_skills: { React: 8, TypeScript: 8, 'Node.js': 8, SQL: 7 },
+    preferred_skills: { Docker: 7, AWS: 7, Nextjs: 8 },
+    required_education: "Bachelor's Degree",
+    typical_experience_years: 2,
+  },
+  {
+    id: 'c3',
+    title: 'Cloud & DevOps Architect',
+    category: 'software_engineering',
+    short_description: 'Designs resilient cloud infrastructure, automated CI/CD pipelines, and zero-downtime deployments.',
+    description: 'Automates cloud infrastructure with Terraform, orchestrates Kubernetes clusters, and guarantees system availability.',
+    median_salary_usd: 160000,
+    salary_range_low: 120000,
+    salary_range_high: 230000,
+    market_demand: 'high',
+    growth_rate_percent: 21.0,
+    automation_risk_percent: 6.5,
+    required_skills: { AWS: 9, Docker: 9, Kubernetes: 8, 'CI/CD': 9 },
+    preferred_skills: { Terraform: 8, Linux: 9, Python: 7 },
+    required_education: "Bachelor's Degree",
+    typical_experience_years: 3,
+  },
+  {
+    id: 'c4',
+    title: 'Data Scientist & AI Analyst',
+    category: 'data_science',
+    short_description: 'Extracts strategic business insights from large-scale structured and unstructured data assets.',
+    description: 'Builds predictive analytics pipelines, runs statistical hypothesis testing, and creates visual intelligence dashboards.',
+    median_salary_usd: 140000,
+    salary_range_low: 100000,
+    salary_range_high: 195000,
+    market_demand: 'high',
+    growth_rate_percent: 22.0,
+    automation_risk_percent: 10.5,
+    required_skills: { Python: 9, Pandas: 9, SQL: 9, Statistics: 8 },
+    preferred_skills: { Tableau: 8, 'A/B Testing': 8, ScikitLearn: 8 },
+    required_education: "Bachelor's / Master's",
+    typical_experience_years: 2,
+  },
+  {
+    id: 'c5',
+    title: 'Technical Product Manager',
+    category: 'product_management',
+    short_description: 'Bridges engineering, design, and executive business strategy to deliver high-impact tech products.',
+    description: 'Defines product roadmaps, prioritizes feature backlogs, and aligns cross-functional engineering teams.',
+    median_salary_usd: 155000,
+    salary_range_low: 115000,
+    salary_range_high: 210000,
+    market_demand: 'medium',
+    growth_rate_percent: 14.5,
+    automation_risk_percent: 9.0,
+    required_skills: { 'Product Management': 9, 'Agile / Scrum': 8, Communication: 9 },
+    preferred_skills: { 'System Design': 7, 'Data Analysis': 8 },
+    required_education: "Bachelor's / MBA",
+    typical_experience_years: 3,
+  },
+  {
+    id: 'c6',
+    title: 'Cybersecurity Systems Analyst',
+    category: 'software_engineering',
+    short_description: 'Secures networks, endpoints, and cloud workloads against advanced persistent threats.',
+    description: 'Implements zero-trust security postures, conducts vulnerability audits, and responds to active incident vectors.',
+    median_salary_usd: 145000,
+    salary_range_low: 105000,
+    salary_range_high: 200000,
+    market_demand: 'high',
+    growth_rate_percent: 28.0,
+    automation_risk_percent: 4.8,
+    required_skills: { Cybersecurity: 9, 'Network Security': 8, Linux: 8 },
+    preferred_skills: { Cryptography: 7, 'Ethical Hacking': 8 },
+    required_education: "Bachelor's Degree",
+    typical_experience_years: 2,
+  }
+];
+
 export default function CareerExplorer() {
-  const [careers, setCareers] = useState<Career[]>([]);
+  const [careers, setCareers] = useState<Career[]>(FALLBACK_CAREERS);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -231,9 +336,26 @@ export default function CareerExplorer() {
       if (q) params.q = q;
       if (category !== 'All') params.category = category;
       const response = await apiClient.get('/careers', { params });
-      setCareers(response.data.data ?? []);
+      const data = response.data.data ?? [];
+      if (data.length > 0) {
+        setCareers(data);
+      } else {
+        // Fallback filter
+        const filtered = FALLBACK_CAREERS.filter(c => {
+          if (category !== 'All' && c.category.toLowerCase() !== category.toLowerCase()) return false;
+          if (q && !c.title.toLowerCase().includes(q.toLowerCase()) && !(c.short_description || '').toLowerCase().includes(q.toLowerCase())) return false;
+          return true;
+        });
+        setCareers(filtered);
+      }
     } catch (err) {
-      console.error('Failed to load careers', err);
+      console.error('Failed to load careers, using fallback seed', err);
+      const filtered = FALLBACK_CAREERS.filter(c => {
+        if (category !== 'All' && c.category.toLowerCase() !== category.toLowerCase()) return false;
+        if (q && !c.title.toLowerCase().includes(q.toLowerCase())) return false;
+        return true;
+      });
+      setCareers(filtered);
     } finally {
       setIsLoading(false);
     }
