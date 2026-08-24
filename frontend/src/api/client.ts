@@ -33,8 +33,17 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // If the error is 401 and we haven't retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Check if the request is an auth endpoint (login, register, otp, refresh)
+    const isAuthRoute = originalRequest?.url?.includes('/auth/login') ||
+                        originalRequest?.url?.includes('/auth/register') ||
+                        originalRequest?.url?.includes('/auth/refresh') ||
+                        originalRequest?.url?.includes('/auth/demo') ||
+                        originalRequest?.url?.includes('/auth/verify-otp') ||
+                        originalRequest?.url?.includes('/auth/forgot-password') ||
+                        originalRequest?.url?.includes('/auth/reset-password');
+
+    // If the error is 401 and we haven't retried yet and it's NOT an auth route
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
       
       try {
