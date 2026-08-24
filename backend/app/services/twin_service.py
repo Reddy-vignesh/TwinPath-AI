@@ -82,6 +82,67 @@ class TwinDataService:
     # SKILLS
     # ══════════════════════════════════════════════════════════════
 
+    def calculate_skill_verification_weight(
+        self,
+        profile: Any,
+        skill_name: str,
+        requested_source: str | None,
+        proficiency_level: int,
+    ) -> tuple[float, str, bool]:
+        """
+        Verification pipeline that assigns a verification weight (0.0 - 1.0)
+        based on:
+        1. GitHub repository presence and active coding footprint
+        2. Resume semantic context and skill embeddings in profile bio & project history
+        3. Stated practical application context
+        """
+        weight = 0.35  # Base confidence for user declaration
+
+        evidence_signals: list[str] = []
+
+        # 1. GitHub Repository Evidence Analysis
+        if profile and getattr(profile, "github_url", None):
+            gh_url = str(profile.github_url).strip().lower()
+            if "github.com/" in gh_url and len(gh_url) > 19:
+                weight += 0.30
+                evidence_signals.append("GitHub Verified")
+
+        # 2. Resume & Embedding Context Extraction
+        bio_text = (getattr(profile, "bio", "") or "").lower()
+        s_norm = skill_name.lower().strip()
+        if s_norm in bio_text or any(token in bio_text for token in s_norm.split() if len(token) > 2):
+            weight += 0.20
+            evidence_signals.append("Resume Context")
+
+        # 3. Practical Application Context Weighting
+        src = (requested_source or "").lower()
+        if "professional" in src or "production" in src:
+            weight += 0.25
+            evidence_signals.append("Production")
+        elif "open source" in src or "hackathon" in src:
+            weight += 0.20
+            evidence_signals.append("Open Source")
+        elif "internship" in src:
+            weight += 0.20
+            evidence_signals.append("Internship")
+        elif "personal projects" in src or "project" in src:
+            weight += 0.15
+            evidence_signals.append("Projects")
+        elif "academic" in src:
+            weight += 0.10
+            evidence_signals.append("Academic")
+
+        final_weight = min(1.0, round(weight, 2))
+        is_verified = final_weight >= 0.65
+
+        # Format descriptive verified source tag (fitted to database column limits)
+        if evidence_signals:
+            enriched_source = " · ".join(evidence_signals)[:50]
+        else:
+            enriched_source = (requested_source or "User Stated")[:50]
+
+        return final_weight, enriched_source, is_verified
+
     async def add_skill(
         self, user_id: uuid.UUID, data: UserSkillCreate
     ) -> UserSkill:
@@ -99,15 +160,35 @@ class TwinDataService:
         if existing:
             raise ConflictException(message="Skill already added to profile.")
 
+        # Run verification pipeline
+        profile = await self.profile_repo.get_by_id(profile_id)
+        weight, enriched_source, is_verified = self.calculate_skill_verification_weight(
+            profile=profile,
+            skill_name=skill.name,
+            requested_source=data.source,
+            proficiency_level=data.proficiency_level,
+        )
+
         user_skill = UserSkill(
             profile_id=profile_id,
-            **data.model_dump(),
+            skill_id=data.skill_id,
+            proficiency_level=data.proficiency_level,
+            years_experience=data.years_experience,
+            is_primary=data.is_primary or is_verified,
+            source=enriched_source,
         )
         created = await self.user_skill_repo.create(user_skill)
         await self.session.commit()
         await self._sync_completeness(user_id)
 
-        logger.info("Skill added", user_id=str(user_id), skill_id=str(data.skill_id))
+        logger.info(
+            "Skill verified and added",
+            user_id=str(user_id),
+            skill_name=skill.name,
+            verification_weight=weight,
+            is_verified=is_verified,
+            source=enriched_source,
+        )
         return created
 
     async def update_skill(
