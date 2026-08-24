@@ -174,8 +174,8 @@ export default function Login() {
         fetchUser().catch(() => {});
       }
       
-      // 5. Rich, smooth 1200ms holographic entrance animation to dashboard
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      // 5. Rich, smooth 2500ms holographic entrance animation to dashboard (2.5s duration)
+      await new Promise(resolve => setTimeout(resolve, 2500));
       navigate('/dashboard');
     } catch (err: any) {
       setIsEnteringWeb(false);
