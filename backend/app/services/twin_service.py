@@ -201,7 +201,7 @@ class TwinDataService:
 
         user_skill = UserSkill(
             profile_id=profile_id,
-            skill_id=data.skill_id,
+            skill_id=skill.id,
             proficiency_level=data.proficiency_level,
             years_experience=data.years_experience,
             is_primary=data.is_primary or is_verified,
@@ -209,6 +209,8 @@ class TwinDataService:
         )
         created = await self.user_skill_repo.create(user_skill)
         await self.session.commit()
+        await self.session.refresh(created)
+        created.skill = skill
         await self._sync_completeness(user_id)
 
         logger.info(
