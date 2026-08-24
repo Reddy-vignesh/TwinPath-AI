@@ -134,7 +134,13 @@ class TwinDataService:
         user_skill = await self.user_skill_repo.get_by_id(user_skill_id)
 
         if not user_skill or user_skill.profile_id != profile_id:
-            raise NotFoundException(message="User skill not found.")
+            alt_skills = await self.user_skill_repo.get_by_profile(profile_id)
+            match = next((s for s in alt_skills if s.skill_id == user_skill_id or s.id == user_skill_id), None)
+            if match:
+                user_skill = match
+                user_skill_id = match.id
+            else:
+                raise NotFoundException(message="User skill not found.")
 
         await self.user_skill_repo.delete(user_skill_id)
         await self.session.commit()
