@@ -95,8 +95,8 @@ async def export_user_data(
     Exports all user data, profile evidence, calibrated skills, and vector twin metrics in JSON format.
     """
     from app.repositories.user_repository import UserRepository
-    from app.repositories.twin_repositories import UserSkillRepository
-    from datetime import datetime, UTC
+    from app.repositories.skill_repository import UserSkillRepository
+    from datetime import datetime, timezone
 
     user_id = uuid.UUID(current_user.sub)
     user_repo = UserRepository(session)
@@ -104,12 +104,14 @@ async def export_user_data(
 
     user = await user_repo.get_by_id(user_id)
     profile = await service.get_profile(user_id)
-    skills = await skill_repo.get_by_user_id(user_id)
+    skills = []
+    if profile:
+        skills = await skill_repo.get_by_profile(profile.id)
 
     export_payload = {
         "export_metadata": {
             "platform": "TwinPath AI",
-            "exported_at": datetime.now(UTC).isoformat(),
+            "exported_at": datetime.now(timezone.utc).isoformat(),
             "user_id": str(user_id),
             "version": "1.0-GDPR",
         },
@@ -123,6 +125,7 @@ async def export_user_data(
         "calibrated_skills": [
             {
                 "skill_id": str(s.skill_id),
+                "skill_name": s.skill.name if getattr(s, "skill", None) else "Skill",
                 "proficiency_level": s.proficiency_level,
                 "verified": s.verified,
                 "source": s.source,
