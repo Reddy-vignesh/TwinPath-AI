@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfileStore, type SkillCatalogItem } from '../stores/profileStore';
 import { useAuthStore } from '../stores/authStore';
@@ -210,10 +210,35 @@ export default function Profile() {
   // Skill Intelligence Builder State
   const [skillSearch, setSkillSearch] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<SkillCatalogItem | null>(null);
+  const [isSkillDropdownOpen, setIsSkillDropdownOpen] = useState(false);
   const [proficiencyLevel, setProficiencyLevel] = useState<'Beginner' | 'Intermediate' | 'Advanced' | 'Expert'>('Intermediate');
   const [selectedContexts, setSelectedContexts] = useState<string[]>(['Personal Projects']);
   const [skillError, setSkillError] = useState('');
   const [addingSkill, setAddingSkill] = useState(false);
+  const skillAutocompleteRef = useRef<HTMLDivElement>(null);
+
+  // Close autocomplete dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        skillAutocompleteRef.current &&
+        !skillAutocompleteRef.current.contains(event.target as Node)
+      ) {
+        setIsSkillDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleSelectSkillItem = (sk: SkillCatalogItem) => {
+    setSelectedSkill(sk);
+    setSkillSearch(sk.name);
+    setIsSkillDropdownOpen(false);
+    setSkillError('');
+  };
 
   // Resume Ingestion States
   const [uploadingResume, setUploadingResume] = useState(false);
@@ -435,29 +460,6 @@ export default function Profile() {
       case 'Advanced': return 8;
       case 'Expert': return 10;
       default: return 6;
-    }
-  };
-
-  const [addingQuickSkillId, setAddingQuickSkillId] = useState<string | null>(null);
-
-  const handleQuickSelectSkill = async (sk: SkillCatalogItem) => {
-    setAddingQuickSkillId(sk.id);
-    try {
-      await addSkill(sk.id, mapProficiencyToNumber('Intermediate'), undefined);
-      try {
-        await apiClient.post('/skills', {
-          skill_id: sk.id,
-          proficiency_level: mapProficiencyToNumber('Intermediate'),
-          source: 'Personal Projects, Academic',
-        });
-      } catch {
-        // Handled by store
-      }
-      await fetchSkills();
-    } catch (err) {
-      console.error('Quick select add skill error', err);
-    } finally {
-      setAddingQuickSkillId(null);
     }
   };
 
@@ -1114,72 +1116,6 @@ export default function Profile() {
       {/* SECTION 4: SKILL INTELLIGENCE */}
       <Section title="4. Skill Intelligence" icon={<Wrench size={18} color="var(--accent-primary)" />} badge={`${skills.length} Verified`}>
 
-        {/* Quick Select Bar (Instantly removes clicked tag and adds to verified skills) */}
-        {(() => {
-          const existingSkillNames = new Set(skills.map(s => (s.skill?.name || '').toLowerCase()));
-          const quickSelectSkills = MASTER_SKILLS_CATALOG.filter(
-            sk => !existingSkillNames.has(sk.name.toLowerCase()) && addingQuickSkillId !== sk.id
-          ).slice(0, 10);
-
-          if (quickSelectSkills.length === 0) return null;
-
-          return (
-            <div style={{
-              background: 'rgba(37, 99, 235, 0.05)',
-              border: '1px solid rgba(37, 99, 235, 0.2)',
-              borderRadius: 'var(--radius-md)',
-              padding: '0.85rem 1rem',
-              marginBottom: '1.25rem',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  ⚡ Quick Select (Click to instantly add to verified skills):
-                </span>
-                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                  Tags disappear immediately upon selection
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-                {quickSelectSkills.map(sk => (
-                  <button
-                    key={sk.id}
-                    type="button"
-                    onClick={() => handleQuickSelectSkill(sk)}
-                    disabled={addingQuickSkillId === sk.id}
-                    style={{
-                      padding: '0.3rem 0.65rem',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      background: 'var(--bg-surface)',
-                      color: 'var(--text-primary)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      transition: 'all 0.15s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                      e.currentTarget.style.color = 'var(--accent-primary)';
-                      e.currentTarget.style.background = 'rgba(37, 99, 235, 0.1)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                      e.currentTarget.style.color = 'var(--text-primary)';
-                      e.currentTarget.style.background = 'var(--bg-surface)';
-                    }}
-                  >
-                    <span>+ {sk.name}</span>
-                    <span style={{ fontSize: '0.65rem', opacity: 0.6 }}>({sk.category})</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-
         {/* Add Skill Builder */}
         <div style={{ background: 'var(--bg-elevated)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: 'var(--micro-border)', marginBottom: '1.25rem' }}>
           <h4 style={{ margin: '0 0 0.85rem 0', fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -1189,7 +1125,7 @@ export default function Profile() {
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
 
             {/* Search Dropdown with Full Catalog Autocomplete & Typo Protection */}
-            <div style={{ position: 'relative' }}>
+            <div ref={skillAutocompleteRef} style={{ position: 'relative' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Search Skill Catalog *
               </label>
@@ -1201,12 +1137,30 @@ export default function Profile() {
                   style={{ paddingLeft: '32px', paddingRight: skillSearch ? '30px' : '10px' }}
                   placeholder="e.g. Python, Docker, PyTorch, React, SQL..."
                   value={skillSearch}
-                  onChange={e => handleSkillSearch(e.target.value)}
+                  onFocus={() => {
+                    if (skillSearch.trim().length >= 1) {
+                      setIsSkillDropdownOpen(true);
+                    }
+                  }}
+                  onChange={e => {
+                    setSkillSearch(e.target.value);
+                    setIsSkillDropdownOpen(true);
+                    handleSkillSearch(e.target.value);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Escape') {
+                      setIsSkillDropdownOpen(false);
+                    }
+                  }}
                 />
                 {skillSearch && (
                   <button
                     type="button"
-                    onClick={() => { setSkillSearch(''); setSelectedSkill(null); }}
+                    onClick={() => {
+                      setSkillSearch('');
+                      setSelectedSkill(null);
+                      setIsSkillDropdownOpen(false);
+                    }}
                     style={{
                       position: 'absolute', right: '10px', top: '9px',
                       background: 'none', border: 'none', color: 'var(--text-muted)',
@@ -1220,8 +1174,7 @@ export default function Profile() {
               </div>
 
               {/* Autocomplete Dropdown displaying clearly below input */}
-              {(() => {
-                if (skillSearch.trim().length < 1) return null;
+              {isSkillDropdownOpen && skillSearch.trim().length >= 1 && (() => {
                 const pool = [...MASTER_SKILLS_CATALOG, ...skillCatalog];
                 const seen = new Set<string>();
                 const scored: Array<{ skill: SkillCatalogItem; score: number }> = [];
@@ -1242,7 +1195,7 @@ export default function Profile() {
                 if (matches.length === 0) {
                   return (
                     <div style={{
-                      position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 1000,
+                      position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
                       background: 'var(--bg-surface)', border: '1px solid rgba(56, 189, 248, 0.35)',
                       borderRadius: 'var(--radius-md)', padding: '0.75rem 1rem', marginTop: '2px',
                       boxShadow: '0 12px 30px rgba(0, 0, 0, 0.7)', fontSize: '0.8125rem', color: 'var(--text-muted)'
@@ -1254,7 +1207,7 @@ export default function Profile() {
 
                 return (
                   <div style={{
-                    position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 1000,
+                    position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
                     background: 'var(--bg-surface)', border: '1px solid rgba(56, 189, 248, 0.35)',
                     borderRadius: 'var(--radius-md)', maxHeight: '220px', overflowY: 'auto',
                     marginTop: '2px', boxShadow: '0 12px 30px rgba(0, 0, 0, 0.7)'
@@ -1264,10 +1217,7 @@ export default function Profile() {
                       return (
                         <div
                           key={sk.id}
-                          onClick={() => {
-                            setSelectedSkill(sk);
-                            setSkillSearch(sk.name);
-                          }}
+                          onClick={() => handleSelectSkillItem(sk)}
                           style={{
                             padding: '0.65rem 0.9rem', cursor: 'pointer', fontSize: '0.8125rem',
                             borderBottom: 'var(--micro-border)', display: 'flex', justifyContent: 'space-between',
