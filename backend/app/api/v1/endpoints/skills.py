@@ -132,7 +132,7 @@ async def update_skill(
 
 @router.delete("/{skill_id}", summary="Remove skill from profile")
 async def remove_skill(
-    skill_id: uuid.UUID,
+    skill_id: str,
     current_user: TokenPayload = Depends(get_current_user),
     service: TwinDataService = Depends(_get_service),
 ) -> dict[str, Any]:
