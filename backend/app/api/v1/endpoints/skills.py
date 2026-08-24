@@ -106,6 +106,10 @@ async def add_skill(
     service: TwinDataService = Depends(_get_service),
 ) -> dict[str, Any]:
     user_skill = await service.add_skill(uuid.UUID(current_user.sub), payload)
+    if getattr(user_skill, "skill", None) is None:
+        sk = await service.skill_catalog_repo.get_by_id(user_skill.skill_id)
+        if sk:
+            user_skill.skill = sk
     return success_response(
         data=UserSkillRead.model_validate(user_skill).model_dump(mode="json"),
         message="Skill added to profile.",
