@@ -23,9 +23,10 @@ class SkillCatalogRepository(BaseRepository[Skill]):
         super().__init__(Skill, session)
 
     async def get_by_name(self, name: str) -> Skill | None:
-        stmt = select(Skill).where(Skill.name == name)
+        from sqlalchemy import func
+        stmt = select(Skill).where(func.lower(Skill.name) == name.strip().lower())
         result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     async def search(self, query: str, limit: int = 20) -> list[Skill]:
         stmt = (
