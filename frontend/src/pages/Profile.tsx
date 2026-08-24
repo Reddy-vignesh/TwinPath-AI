@@ -164,7 +164,7 @@ export default function Profile() {
     profile, skills, skillCatalog,
     isLoading, isSaving, isLoadingSkills,
     fetchProfile, updateProfile, fetchSkills,
-    searchSkillCatalog, removeSkill,
+    searchSkillCatalog,
   } = useProfileStore();
 
   // User identity names
@@ -1367,9 +1367,17 @@ export default function Profile() {
                   type="button"
                   onClick={async () => {
                     try {
-                      await removeSkill(us.id);
-                    } catch (e) {
-                      console.error('Failed to remove skill', e);
+                      await apiClient.delete(`/skills/${us.id}`);
+                    } catch {
+                      if (us.skill?.id) {
+                        try {
+                          await apiClient.delete(`/skills/${us.skill.id}`);
+                        } catch {}
+                      } else if (us.skill?.name) {
+                        try {
+                          await apiClient.delete(`/skills/${encodeURIComponent(us.skill.name)}`);
+                        } catch {}
+                      }
                     } finally {
                       await fetchSkills();
                     }
@@ -1378,6 +1386,8 @@ export default function Profile() {
                     background: 'none', border: 'none', cursor: 'pointer',
                     color: 'var(--text-muted)', padding: '0.2rem', transition: 'color 0.15s ease'
                   }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                   title="Remove Skill"
                 >
                   <Trash2 size={14} />
