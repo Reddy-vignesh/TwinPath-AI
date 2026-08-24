@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useProfileStore, type SkillCatalogItem } from '../stores/profileStore';
 import { useAuthStore } from '../stores/authStore';
 import { apiClient } from '../api/client';
-import { 
-  User, GraduationCap, Target, Wrench, Save, Plus, Trash2, 
+import {
+  User, GraduationCap, Target, Wrench, Save, Plus, Trash2,
   Search, CheckCircle, ChevronDown, ChevronUp, Loader2,
   Globe, Code2, HelpCircle, CheckCheck, AlertCircle,
   Download, ShieldCheck
@@ -29,12 +29,12 @@ function Section({ title, icon, children, badge }: { title: string; icon: React.
           {title}
         </h3>
         {badge && (
-          <span style={{ 
-            fontSize: '0.6875rem', 
-            fontWeight: 600, 
-            padding: '0.15rem 0.5rem', 
-            borderRadius: 'var(--radius-sm)', 
-            background: 'rgba(37, 99, 235, 0.1)', 
+          <span style={{
+            fontSize: '0.6875rem',
+            fontWeight: 600,
+            padding: '0.15rem 0.5rem',
+            borderRadius: 'var(--radius-sm)',
+            background: 'rgba(37, 99, 235, 0.1)',
             color: 'var(--accent-primary)',
             border: '1px solid rgba(37, 99, 235, 0.25)',
             marginRight: '0.5rem'
@@ -118,6 +118,44 @@ const MASTER_SKILLS_CATALOG: SkillCatalogItem[] = [
   { id: '45', name: 'Communication', category: 'Soft Skills' },
   { id: '46', name: 'Cybersecurity', category: 'Security' },
 ];
+
+// Typo-Tolerant Real-Time Search & Autocomplete Matcher
+function matchSkillWithTypoTolerance(query: string, skill: SkillCatalogItem): number {
+  const q = query.toLowerCase().trim().replace(/[\s\-_.]/g, '');
+  const nameNorm = skill.name.toLowerCase().replace(/[\s\-_.]/g, '');
+  const catNorm = skill.category.toLowerCase().replace(/[\s\-_.]/g, '');
+
+  if (!q) return 0;
+  if (nameNorm === q) return 100;
+  if (nameNorm.startsWith(q)) return 90;
+  if (nameNorm.includes(q)) return 75;
+  if (catNorm.includes(q)) return 50;
+
+  // Typo tolerance: Levenshtein / character edit distance for typos (e.g. "pythn", "doker", "reactjs", "kubrnetes")
+  const target = nameNorm;
+  let distance = 0;
+  let qi = 0;
+  let ti = 0;
+
+  while (qi < q.length && ti < target.length) {
+    if (q[qi] === target[ti]) {
+      qi++;
+      ti++;
+    } else {
+      distance++;
+      if (q.length > target.length) qi++;
+      else if (target.length > q.length) ti++;
+      else { qi++; ti++; }
+    }
+  }
+  distance += (q.length - qi) + (target.length - ti);
+
+  const allowedErrors = q.length <= 4 ? 1 : 2;
+  if (distance <= allowedErrors) {
+    return 40 - distance * 10;
+  }
+  return 0;
+}
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -401,16 +439,16 @@ export default function Profile() {
   };
 
   const handleAddSkill = async () => {
-    if (!selectedSkill) { 
-      setSkillError('Select a skill from the catalog dropdown first.'); 
-      return; 
+    if (!selectedSkill) {
+      setSkillError('Select a skill from the catalog dropdown first.');
+      return;
     }
     setSkillError('');
     setAddingSkill(true);
     try {
       const sourceStr = selectedContexts.length > 0 ? selectedContexts.join(', ') : 'Personal Projects';
       await addSkill(selectedSkill.id, mapProficiencyToNumber(proficiencyLevel), undefined);
-      
+
       // Update skill source
       try {
         await apiClient.post('/skills', {
@@ -525,7 +563,7 @@ export default function Profile() {
 
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto', paddingBottom: '4rem' }}>
-      
+
       {/* Executive Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -538,7 +576,7 @@ export default function Profile() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ 
+          <div style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
             background: 'var(--bg-surface)', padding: '0.45rem 0.85rem',
             borderRadius: 'var(--radius-md)', border: 'var(--micro-border)'
@@ -553,7 +591,7 @@ export default function Profile() {
             </span>
           </div>
 
-          <button 
+          <button
             className="btn btn-primary"
             onClick={handleSave}
             disabled={isSaving}
@@ -606,9 +644,9 @@ export default function Profile() {
       )}
 
       {/* Cyber Holographic Resume & Evidence Ingestion Vault */}
-      <CyberResumeUpload 
-        onFileSelect={handleResumeFile} 
-        uploading={uploadingResume} 
+      <CyberResumeUpload
+        onFileSelect={handleResumeFile}
+        uploading={uploadingResume}
       />
 
       {resumeError && (
@@ -624,18 +662,18 @@ export default function Profile() {
       {/* SECTION 1: PROFESSIONAL IDENTITY */}
       <Section title="1. Professional Identity" icon={<User size={18} color="var(--accent-primary)" />} badge="Required Links">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-          
+
           {/* First Name */}
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               First Name *
             </label>
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="e.g. Alex" 
-              value={firstName} 
-              onChange={e => setFirstName(e.target.value)} 
+            <input
+              type="text"
+              className="input-field"
+              placeholder="e.g. Alex"
+              value={firstName}
+              onChange={e => setFirstName(e.target.value)}
             />
           </div>
 
@@ -644,12 +682,12 @@ export default function Profile() {
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Last Name *
             </label>
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="e.g. Morgan" 
-              value={lastName} 
-              onChange={e => setLastName(e.target.value)} 
+            <input
+              type="text"
+              className="input-field"
+              placeholder="e.g. Morgan"
+              value={lastName}
+              onChange={e => setLastName(e.target.value)}
             />
           </div>
 
@@ -658,12 +696,12 @@ export default function Profile() {
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Current Location
             </label>
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="e.g. Hyderabad, India" 
-              value={form.location} 
-              onChange={e => handleField('location', e.target.value)} 
+            <input
+              type="text"
+              className="input-field"
+              placeholder="e.g. Hyderabad, India"
+              value={form.location}
+              onChange={e => handleField('location', e.target.value)}
             />
           </div>
 
@@ -672,12 +710,12 @@ export default function Profile() {
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Phone Number
             </label>
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="e.g. +91 98765 43210" 
-              value={form.phone} 
-              onChange={e => handleField('phone', e.target.value)} 
+            <input
+              type="text"
+              className="input-field"
+              placeholder="e.g. +91 98765 43210"
+              value={form.phone}
+              onChange={e => handleField('phone', e.target.value)}
             />
           </div>
 
@@ -688,12 +726,12 @@ export default function Profile() {
           <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Professional Summary & Research Focus
           </label>
-          <textarea 
-            className="input-field" 
+          <textarea
+            className="input-field"
             rows={4}
-            placeholder="Describe your engineering domain, technical interests, research projects, and focus areas..." 
-            value={form.bio} 
-            onChange={e => handleField('bio', e.target.value)} 
+            placeholder="Describe your engineering domain, technical interests, research projects, and focus areas..."
+            value={form.bio}
+            onChange={e => handleField('bio', e.target.value)}
             style={{ width: '100%', minHeight: '110px', resize: 'vertical', boxSizing: 'border-box' }}
           />
         </div>
@@ -719,12 +757,12 @@ export default function Profile() {
                   <HelpCircle size={13} />
                 </span>
               </div>
-              <input 
-                type="url" 
-                className="input-field" 
-                placeholder="https://github.com/your-handle" 
-                value={form.github_url} 
-                onChange={e => handleField('github_url', e.target.value)} 
+              <input
+                type="url"
+                className="input-field"
+                placeholder="https://github.com/your-handle"
+                value={form.github_url}
+                onChange={e => handleField('github_url', e.target.value)}
                 required
               />
               <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
@@ -743,12 +781,12 @@ export default function Profile() {
                   <HelpCircle size={13} />
                 </span>
               </div>
-              <input 
-                type="url" 
-                className="input-field" 
-                placeholder="https://linkedin.com/in/your-handle" 
-                value={form.linkedin_url} 
-                onChange={e => handleField('linkedin_url', e.target.value)} 
+              <input
+                type="url"
+                className="input-field"
+                placeholder="https://linkedin.com/in/your-handle"
+                value={form.linkedin_url}
+                onChange={e => handleField('linkedin_url', e.target.value)}
                 required
               />
               <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
@@ -768,12 +806,12 @@ export default function Profile() {
                   <HelpCircle size={13} />
                 </span>
               </div>
-              <input 
-                type="url" 
-                className="input-field" 
-                placeholder="https://yourportfolio.dev" 
-                value={form.portfolio_url} 
-                onChange={e => handleField('portfolio_url', e.target.value)} 
+              <input
+                type="url"
+                className="input-field"
+                placeholder="https://yourportfolio.dev"
+                value={form.portfolio_url}
+                onChange={e => handleField('portfolio_url', e.target.value)}
               />
             </div>
 
@@ -801,16 +839,16 @@ export default function Profile() {
                     gap: '0.25rem',
                   }}
                 >
-                  <Plus size={11} /> + Add
+                  <Plus size={11} />  Add
                 </button>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                 {codingProfiles.map((cp, idx) => (
                   <div key={idx} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                    <select 
-                      className="input-field" 
-                      value={cp.platform} 
+                    <select
+                      className="input-field"
+                      value={cp.platform}
                       onChange={e => updateCodingProfile(idx, 'platform', e.target.value)}
                       style={{ width: '130px', flexShrink: 0 }}
                     >
@@ -822,12 +860,12 @@ export default function Profile() {
                       <option value="GeeksforGeeks">GeeksforGeeks</option>
                       <option value="AtCoder">AtCoder</option>
                     </select>
-                    <input 
-                      type="text" 
-                      className="input-field" 
-                      placeholder="Username or profile URL" 
-                      value={cp.url} 
-                      onChange={e => updateCodingProfile(idx, 'url', e.target.value)} 
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="Username or profile URL"
+                      value={cp.url}
+                      onChange={e => updateCodingProfile(idx, 'url', e.target.value)}
                       style={{ flex: 1 }}
                     />
                     {codingProfiles.length > 1 && (
@@ -858,15 +896,15 @@ export default function Profile() {
       {/* SECTION 2: ACADEMIC PROFILE (DEPENDENT DROPDOWNS) */}
       <Section title="2. Academic Profile" icon={<GraduationCap size={18} color="var(--accent-primary)" />} badge="Dependent Taxonomy">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-          
+
           {/* Step 1: Highest Education Level */}
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Step 1: Highest Education Level *
             </label>
-            <select 
-              className="input-field" 
-              value={form.education_level} 
+            <select
+              className="input-field"
+              value={form.education_level}
               onChange={e => handleField('education_level', e.target.value)}
             >
               <option value="High School">High School</option>
@@ -882,9 +920,9 @@ export default function Profile() {
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Step 2: Degree Program *
             </label>
-            <select 
-              className="input-field" 
-              value={form.highest_degree} 
+            <select
+              className="input-field"
+              value={form.highest_degree}
               onChange={e => handleField('highest_degree', e.target.value)}
             >
               {(DEGREE_OPTIONS_BY_LEVEL[form.education_level] || []).map(deg => (
@@ -897,17 +935,17 @@ export default function Profile() {
 
         {/* Step 3: Branch, Institution, CGPA, Grad Year */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          
+
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Major / Branch of Study *
             </label>
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="e.g. Computer Science and Engineering" 
-              value={form.current_major} 
-              onChange={e => handleField('current_major', e.target.value)} 
+            <input
+              type="text"
+              className="input-field"
+              placeholder="e.g. Computer Science and Engineering"
+              value={form.current_major}
+              onChange={e => handleField('current_major', e.target.value)}
             />
           </div>
 
@@ -915,12 +953,12 @@ export default function Profile() {
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               University / Institution *
             </label>
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="e.g. Indian Institute of Technology" 
-              value={form.current_university} 
-              onChange={e => handleField('current_university', e.target.value)} 
+            <input
+              type="text"
+              className="input-field"
+              placeholder="e.g. Indian Institute of Technology"
+              value={form.current_university}
+              onChange={e => handleField('current_university', e.target.value)}
             />
           </div>
 
@@ -928,15 +966,15 @@ export default function Profile() {
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Cumulative CGPA / GPA (Scale of 10)
             </label>
-            <input 
-              type="number" 
-              step="0.01" 
-              min="0" 
-              max="10" 
-              className="input-field" 
-              placeholder="e.g. 8.75" 
-              value={form.current_cgpa} 
-              onChange={e => handleField('current_cgpa', e.target.value)} 
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="10"
+              className="input-field"
+              placeholder="e.g. 8.75"
+              value={form.current_cgpa}
+              onChange={e => handleField('current_cgpa', e.target.value)}
             />
           </div>
 
@@ -944,14 +982,14 @@ export default function Profile() {
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Graduation Year
             </label>
-            <input 
-              type="number" 
-              min="1950" 
-              max="2035" 
-              className="input-field" 
-              placeholder="e.g. 2026" 
-              value={form.graduation_year} 
-              onChange={e => handleField('graduation_year', e.target.value)} 
+            <input
+              type="number"
+              min="1950"
+              max="2035"
+              className="input-field"
+              placeholder="e.g. 2026"
+              value={form.graduation_year}
+              onChange={e => handleField('graduation_year', e.target.value)}
             />
           </div>
 
@@ -961,17 +999,17 @@ export default function Profile() {
       {/* SECTION 3: CAREER INTENT */}
       <Section title="3. Career Intent" icon={<Target size={18} color="var(--accent-primary)" />} badge="Trajectory Vectoring">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-          
+
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Primary Career Goal *
             </label>
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="e.g. AI Systems Engineer" 
-              value={form.career_goal_primary} 
-              onChange={e => handleField('career_goal_primary', e.target.value)} 
+            <input
+              type="text"
+              className="input-field"
+              placeholder="e.g. AI Systems Engineer"
+              value={form.career_goal_primary}
+              onChange={e => handleField('career_goal_primary', e.target.value)}
             />
           </div>
 
@@ -979,12 +1017,12 @@ export default function Profile() {
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Secondary Career Goal
             </label>
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="e.g. Site Reliability Engineer" 
-              value={form.career_goal_secondary} 
-              onChange={e => handleField('career_goal_secondary', e.target.value)} 
+            <input
+              type="text"
+              className="input-field"
+              placeholder="e.g. Site Reliability Engineer"
+              value={form.career_goal_secondary}
+              onChange={e => handleField('career_goal_secondary', e.target.value)}
             />
           </div>
 
@@ -992,12 +1030,12 @@ export default function Profile() {
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Preferred Industry
             </label>
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="e.g. Artificial Intelligence, FinTech, SaaS" 
-              value={form.preferred_industry} 
-              onChange={e => handleField('preferred_industry', e.target.value)} 
+            <input
+              type="text"
+              className="input-field"
+              placeholder="e.g. Artificial Intelligence, FinTech, SaaS"
+              value={form.preferred_industry}
+              onChange={e => handleField('preferred_industry', e.target.value)}
             />
           </div>
 
@@ -1005,9 +1043,9 @@ export default function Profile() {
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Preferred Company Type
             </label>
-            <select 
-              className="input-field" 
-              value={form.company_type} 
+            <select
+              className="input-field"
+              value={form.company_type}
               onChange={e => handleField('company_type', e.target.value)}
             >
               <option value="Startup">Startup</option>
@@ -1022,9 +1060,9 @@ export default function Profile() {
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Preferred Work Mode
             </label>
-            <select 
-              className="input-field" 
-              value={form.preferred_work_style} 
+            <select
+              className="input-field"
+              value={form.preferred_work_style}
               onChange={e => handleField('preferred_work_style', e.target.value)}
             >
               <option value="Remote">Remote</option>
@@ -1037,11 +1075,11 @@ export default function Profile() {
 
         {/* Relocation Checkbox */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginTop: '0.5rem' }}>
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             id="relocateCheck"
-            checked={form.willing_to_relocate} 
-            onChange={e => handleField('willing_to_relocate', e.target.checked)} 
+            checked={form.willing_to_relocate}
+            onChange={e => handleField('willing_to_relocate', e.target.checked)}
             style={{ width: '16px', height: '16px', accentColor: 'var(--accent-primary)' }}
           />
           <label htmlFor="relocateCheck" style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', cursor: 'pointer' }}>
@@ -1052,53 +1090,6 @@ export default function Profile() {
 
       {/* SECTION 4: SKILL INTELLIGENCE */}
       <Section title="4. Skill Intelligence" icon={<Wrench size={18} color="var(--accent-primary)" />} badge={`${skills.length} Verified`}>
-        
-        {/* Dynamic Recommended Skills Row (Disappears as skills are added) */}
-        {(() => {
-          const existingSkillNames = new Set(skills.map(s => (s.skill?.name || '').toLowerCase()));
-          const recommendedSuggestions = MASTER_SKILLS_CATALOG.filter(
-            sk => !existingSkillNames.has(sk.name.toLowerCase())
-          ).slice(0, 8);
-
-          if (recommendedSuggestions.length === 0) return null;
-
-          return (
-            <div style={{ marginBottom: '1.15rem', background: 'rgba(37, 99, 235, 0.06)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(37, 99, 235, 0.2)' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-primary)', display: 'block', marginBottom: '0.5rem' }}>
-                ✨ Recommended Skills for AI Twin Calibration (Click to Quick-Select):
-              </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                {recommendedSuggestions.map(sk => (
-                  <button
-                    key={sk.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedSkill(sk);
-                      setSkillSearch(sk.name);
-                    }}
-                    style={{
-                      padding: '0.25rem 0.6rem',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      background: selectedSkill?.name.toLowerCase() === sk.name.toLowerCase() ? 'var(--accent-primary)' : 'var(--bg-surface)',
-                      color: selectedSkill?.name.toLowerCase() === sk.name.toLowerCase() ? '#fff' : 'var(--text-primary)',
-                      border: 'var(--micro-border)',
-                      transition: 'all 0.15s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.3rem',
-                    }}
-                  >
-                    <span>+ {sk.name}</span>
-                    <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>({sk.category})</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
 
         {/* Add Skill Builder */}
         <div style={{ background: 'var(--bg-elevated)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: 'var(--micro-border)', marginBottom: '1.25rem' }}>
@@ -1107,59 +1098,117 @@ export default function Profile() {
           </h4>
 
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-            
-            {/* Search Dropdown with Full Catalog Autocomplete */}
+
+            {/* Search Dropdown with Full Catalog Autocomplete & Typo Protection */}
             <div style={{ position: 'relative' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Search Skill Catalog *
               </label>
               <div style={{ position: 'relative' }}>
                 <Search size={14} style={{ position: 'absolute', left: '10px', top: '11px', color: 'var(--text-muted)' }} />
-                <input 
-                  type="text" 
-                  className="input-field" 
-                  style={{ paddingLeft: '32px' }}
-                  placeholder="e.g. Python, Docker, PyTorch, React, SQL..." 
-                  value={skillSearch} 
-                  onChange={e => handleSkillSearch(e.target.value)} 
+                <input
+                  type="text"
+                  className="input-field"
+                  style={{ paddingLeft: '32px', paddingRight: skillSearch ? '30px' : '10px' }}
+                  placeholder="e.g. Python, Docker, PyTorch, React, SQL..."
+                  value={skillSearch}
+                  onChange={e => handleSkillSearch(e.target.value)}
                 />
+                {skillSearch && (
+                  <button
+                    type="button"
+                    onClick={() => { setSkillSearch(''); setSelectedSkill(null); }}
+                    style={{
+                      position: 'absolute', right: '10px', top: '9px',
+                      background: 'none', border: 'none', color: 'var(--text-muted)',
+                      cursor: 'pointer', fontSize: '14px', lineHeight: 1, padding: '2px'
+                    }}
+                    title="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
 
-              {/* Autocomplete Dropdown */}
+              {/* Autocomplete Dropdown displaying clearly below input */}
               {(() => {
                 if (skillSearch.trim().length < 1) return null;
                 const pool = [...MASTER_SKILLS_CATALOG, ...skillCatalog];
                 const seen = new Set<string>();
-                const matches = pool.filter(sk => {
-                  const key = sk.name.toLowerCase();
-                  if (seen.has(key)) return false;
-                  seen.add(key);
-                  return key.includes(skillSearch.toLowerCase()) || sk.category.toLowerCase().includes(skillSearch.toLowerCase());
-                }).slice(0, 12);
+                const scored: Array<{ skill: SkillCatalogItem; score: number }> = [];
 
-                if (matches.length === 0) return null;
+                for (const sk of pool) {
+                  const key = sk.name.toLowerCase();
+                  if (seen.has(key)) continue;
+                  seen.add(key);
+                  const score = matchSkillWithTypoTolerance(skillSearch, sk);
+                  if (score > 0) {
+                    scored.push({ skill: sk, score });
+                  }
+                }
+
+                scored.sort((a, b) => b.score - a.score);
+                const matches = scored.slice(0, 10).map(s => s.skill);
+
+                if (matches.length === 0) {
+                  return (
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 1000,
+                      background: 'var(--bg-surface)', border: '1px solid rgba(56, 189, 248, 0.35)',
+                      borderRadius: 'var(--radius-md)', padding: '0.75rem 1rem', marginTop: '2px',
+                      boxShadow: '0 12px 30px rgba(0, 0, 0, 0.7)', fontSize: '0.8125rem', color: 'var(--text-muted)'
+                    }}>
+                      No exact match found in catalog.
+                    </div>
+                  );
+                }
 
                 return (
                   <div style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
-                    background: 'var(--bg-surface)', border: 'var(--micro-border)',
-                    borderRadius: 'var(--radius-md)', maxHeight: '200px', overflowY: 'auto',
-                    marginTop: '4px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+                    position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 1000,
+                    background: 'var(--bg-surface)', border: '1px solid rgba(56, 189, 248, 0.35)',
+                    borderRadius: 'var(--radius-md)', maxHeight: '220px', overflowY: 'auto',
+                    marginTop: '2px', boxShadow: '0 12px 30px rgba(0, 0, 0, 0.7)'
                   }}>
-                    {matches.map(sk => (
-                      <div 
-                        key={sk.id}
-                        onClick={() => { setSelectedSkill(sk); setSkillSearch(sk.name); }}
-                        style={{
-                          padding: '0.6rem 0.85rem', cursor: 'pointer', fontSize: '0.8125rem',
-                          borderBottom: 'var(--micro-border)', display: 'flex', justifyContent: 'space-between',
-                          background: selectedSkill?.name.toLowerCase() === sk.name.toLowerCase() ? 'rgba(37, 99, 235, 0.15)' : 'transparent'
-                        }}
-                      >
-                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{sk.name}</span>
-                        <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{sk.category}</span>
-                      </div>
-                    ))}
+                    {matches.map(sk => {
+                      const isSelected = selectedSkill?.name.toLowerCase() === sk.name.toLowerCase();
+                      return (
+                        <div
+                          key={sk.id}
+                          onClick={() => {
+                            setSelectedSkill(sk);
+                            setSkillSearch(sk.name);
+                          }}
+                          style={{
+                            padding: '0.65rem 0.9rem', cursor: 'pointer', fontSize: '0.8125rem',
+                            borderBottom: 'var(--micro-border)', display: 'flex', justifyContent: 'space-between',
+                            alignItems: 'center',
+                            background: isSelected ? 'rgba(37, 99, 235, 0.18)' : 'transparent',
+                            transition: 'background 0.12s ease',
+                          }}
+                          onMouseEnter={e => {
+                            if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                          }}
+                          onMouseLeave={e => {
+                            if (!isSelected) e.currentTarget.style.background = 'transparent';
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{sk.name}</span>
+                            {isSelected && (
+                              <span style={{ fontSize: '0.6875rem', color: 'var(--accent-primary)', fontWeight: 600 }}>✓ Selected</span>
+                            )}
+                          </div>
+                          <span style={{
+                            fontSize: '0.6875rem', color: 'var(--text-muted)',
+                            background: 'rgba(255, 255, 255, 0.04)', padding: '0.1rem 0.4rem',
+                            borderRadius: 'var(--radius-sm)', border: 'var(--micro-border)'
+                          }}>
+                            {sk.category}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })()}
@@ -1170,9 +1219,9 @@ export default function Profile() {
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Proficiency Level *
               </label>
-              <select 
-                className="input-field" 
-                value={proficiencyLevel} 
+              <select
+                className="input-field"
+                value={proficiencyLevel}
                 onChange={e => setProficiencyLevel(e.target.value as any)}
               >
                 <option value="Beginner">Beginner</option>
@@ -1223,7 +1272,7 @@ export default function Profile() {
           )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button 
+            <button
               type="button"
               className="btn btn-primary"
               onClick={handleAddSkill}
@@ -1249,7 +1298,7 @@ export default function Profile() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
             {skills.map(us => (
-              <div 
+              <div
                 key={us.id}
                 style={{
                   background: 'var(--bg-elevated)', padding: '0.85rem 1rem',
@@ -1276,7 +1325,7 @@ export default function Profile() {
                   )}
                 </div>
 
-                <button 
+                <button
                   type="button"
                   onClick={async () => {
                     try {
@@ -1374,7 +1423,7 @@ export default function Profile() {
       </div>
 
       {/* Danger Zone: Account Deletion */}
-      <div 
+      <div
         className="card"
         style={{
           background: 'rgba(239, 68, 68, 0.03)',
@@ -1417,7 +1466,7 @@ export default function Profile() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div 
+        <div
           className="modal-overlay"
           onClick={() => setShowDeleteModal(false)}
           style={{
@@ -1427,7 +1476,7 @@ export default function Profile() {
             padding: '20px', backdropFilter: 'blur(8px)'
           }}
         >
-          <div 
+          <div
             className="card"
             onClick={e => e.stopPropagation()}
             style={{
@@ -1450,15 +1499,15 @@ export default function Profile() {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
-              <button 
-                className="btn btn-secondary" 
+              <button
+                className="btn btn-secondary"
                 onClick={() => setShowDeleteModal(false)}
                 disabled={isDeletingAccount}
                 style={{ fontSize: '0.8125rem' }}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleDeleteAccount}
                 disabled={isDeletingAccount}
                 style={{
