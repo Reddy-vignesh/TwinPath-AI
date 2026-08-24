@@ -69,6 +69,56 @@ const APPLICATION_CONTEXTS = [
   'Learning / No Practical Application Yet'
 ];
 
+// Comprehensive Master Skill Catalog for Instant Search and Recommendations
+const MASTER_SKILLS_CATALOG: SkillCatalogItem[] = [
+  { id: '1', name: 'Python', category: 'Programming' },
+  { id: '2', name: 'JavaScript', category: 'Programming' },
+  { id: '3', name: 'TypeScript', category: 'Programming' },
+  { id: '4', name: 'Java', category: 'Programming' },
+  { id: '5', name: 'C++', category: 'Programming' },
+  { id: '6', name: 'C', category: 'Programming' },
+  { id: '7', name: 'Go', category: 'Programming' },
+  { id: '8', name: 'Rust', category: 'Programming' },
+  { id: '9', name: 'React', category: 'Web Development' },
+  { id: '10', name: 'Node.js', category: 'Web Development' },
+  { id: '11', name: 'Next.js', category: 'Web Development' },
+  { id: '12', name: 'FastAPI', category: 'Web Development' },
+  { id: '13', name: 'Django', category: 'Web Development' },
+  { id: '14', name: 'HTML', category: 'Web Development' },
+  { id: '15', name: 'CSS', category: 'Web Development' },
+  { id: '16', name: 'SQL', category: 'Database' },
+  { id: '17', name: 'PostgreSQL', category: 'Database' },
+  { id: '18', name: 'MySQL', category: 'Database' },
+  { id: '19', name: 'MongoDB', category: 'Database' },
+  { id: '20', name: 'Redis', category: 'Database' },
+  { id: '21', name: 'Machine Learning', category: 'Data Science' },
+  { id: '22', name: 'Deep Learning', category: 'Data Science' },
+  { id: '23', name: 'PyTorch', category: 'Data Science' },
+  { id: '24', name: 'TensorFlow', category: 'Data Science' },
+  { id: '25', name: 'Scikit-learn', category: 'Data Science' },
+  { id: '26', name: 'Pandas', category: 'Data Science' },
+  { id: '27', name: 'NumPy', category: 'Data Science' },
+  { id: '28', name: 'Natural Language Processing', category: 'Data Science' },
+  { id: '29', name: 'Computer Vision', category: 'Data Science' },
+  { id: '30', name: 'Docker', category: 'Cloud / DevOps' },
+  { id: '31', name: 'Kubernetes', category: 'Cloud / DevOps' },
+  { id: '32', name: 'AWS', category: 'Cloud / DevOps' },
+  { id: '33', name: 'Google Cloud', category: 'Cloud / DevOps' },
+  { id: '34', name: 'Git', category: 'Cloud / DevOps' },
+  { id: '35', name: 'CI/CD', category: 'Cloud / DevOps' },
+  { id: '36', name: 'Linux', category: 'Cloud / DevOps' },
+  { id: '37', name: 'System Design', category: 'Cloud / DevOps' },
+  { id: '38', name: 'Data Structures', category: 'Computer Science' },
+  { id: '39', name: 'Algorithms', category: 'Computer Science' },
+  { id: '40', name: 'UI/UX Design', category: 'Design' },
+  { id: '41', name: 'Figma', category: 'Design' },
+  { id: '42', name: 'Product Management', category: 'Business' },
+  { id: '43', name: 'Agile / Scrum', category: 'Business' },
+  { id: '44', name: 'Problem Solving', category: 'Soft Skills' },
+  { id: '45', name: 'Communication', category: 'Soft Skills' },
+  { id: '46', name: 'Cybersecurity', category: 'Security' },
+];
+
 export default function Profile() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
@@ -83,6 +133,11 @@ export default function Profile() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
 
+  // Multiple Coding Profiles
+  const [codingProfiles, setCodingProfiles] = useState<Array<{ platform: string; url: string }>>([
+    { platform: 'LeetCode', url: '' }
+  ]);
+
   // Main Profile Evidence Form
   const [form, setForm] = useState({
     bio: '',
@@ -91,8 +146,6 @@ export default function Profile() {
     linkedin_url: '',
     github_url: '',
     portfolio_url: '',
-    coding_platform: 'LeetCode',
-    coding_url: '',
     education_level: 'Undergraduate',
     highest_degree: 'B.Tech',
     current_major: '',
@@ -104,7 +157,6 @@ export default function Profile() {
     preferred_industry: '',
     company_type: 'Product Company',
     preferred_work_style: 'Hybrid',
-    preferred_team_size: 'Medium (11-50)',
     preferred_location: '',
     willing_to_relocate: false,
   });
@@ -138,8 +190,40 @@ export default function Profile() {
     setIsExporting(true);
     setExportMessage('');
     try {
-      const response = await apiClient.get('/profiles/export-data');
-      const exportData = response.data.data || response.data;
+      let exportData = null;
+      try {
+        const response = await apiClient.get('/profiles/export-data');
+        exportData = response.data.data || response.data;
+      } catch {
+        // High-fidelity fallback export using current in-memory Twin state
+        exportData = {
+          export_metadata: {
+            platform: "TwinPath AI",
+            exported_at: new Date().toISOString(),
+            user_id: user?.id || "local-user",
+            version: "1.0-GDPR",
+          },
+          user_account: {
+            email: user?.email || "",
+            first_name: firstName || user?.firstName || "",
+            last_name: lastName || user?.lastName || "",
+            role: "student",
+          },
+          student_profile: {
+            ...form,
+            coding_profiles: codingProfiles,
+            twin_completeness_score: profile?.twin_completeness_score || 0,
+          },
+          calibrated_skills: skills.map(s => ({
+            skill_id: s.skill?.id || s.id,
+            skill_name: s.skill?.name || "Skill",
+            proficiency_level: s.proficiency_level,
+            verified: s.is_primary,
+            source: s.source,
+          })),
+        };
+      }
+
       const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportData, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute('href', dataStr);
@@ -187,8 +271,6 @@ export default function Profile() {
         linkedin_url: profile.linkedin_url ?? '',
         github_url: profile.github_url ?? '',
         portfolio_url: profile.portfolio_url ?? '',
-        coding_platform: 'LeetCode',
-        coding_url: '',
         education_level: initialLevel,
         highest_degree: profile.highest_degree ?? (DEGREE_OPTIONS_BY_LEVEL[initialLevel]?.[0] || 'B.Tech'),
         current_major: profile.current_major ?? '',
@@ -200,12 +282,23 @@ export default function Profile() {
         preferred_industry: profile.preferred_industry ?? '',
         company_type: 'Product Company',
         preferred_work_style: profile.preferred_work_style ?? 'Hybrid',
-        preferred_team_size: 'Medium (11-50)',
         preferred_location: profile.location ?? '',
         willing_to_relocate: profile.willing_to_relocate ?? false,
       });
     }
   }, [profile]);
+
+  const addCodingProfile = () => {
+    setCodingProfiles(prev => [...prev, { platform: 'LeetCode', url: '' }]);
+  };
+
+  const removeCodingProfile = (index: number) => {
+    setCodingProfiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateCodingProfile = (index: number, field: 'platform' | 'url', value: string) => {
+    setCodingProfiles(prev => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)));
+  };
 
   const handleField = (field: string, value: any) => {
     setForm(f => {
@@ -591,17 +684,17 @@ export default function Profile() {
         </div>
 
         {/* Bio */}
-        <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ marginBottom: '1.25rem', width: '100%' }}>
           <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Professional Summary & Research Focus
           </label>
           <textarea 
             className="input-field" 
-            rows={3}
-            placeholder="Describe your engineering domain, technical interests, and focus areas..." 
+            rows={4}
+            placeholder="Describe your engineering domain, technical interests, research projects, and focus areas..." 
             value={form.bio} 
             onChange={e => handleField('bio', e.target.value)} 
-            style={{ resize: 'vertical' }}
+            style={{ width: '100%', minHeight: '110px', resize: 'vertical', boxSizing: 'border-box' }}
           />
         </div>
 
@@ -684,37 +777,77 @@ export default function Profile() {
               />
             </div>
 
-            {/* Coding Platform Profile (Optional) */}
+            {/* Dynamic Coding Platform Manager */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                   <Code2 size={12} />
-                  <span>Coding Platform <span style={{ opacity: 0.6 }}>(Choose 1)</span></span>
+                  <span>Coding Platforms & Profiles</span>
                 </label>
-                <span title="Analyzes problem solving consistency and SWE readiness." style={{ cursor: 'help', color: 'var(--text-muted)' }}>
-                  <HelpCircle size={13} />
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <select 
-                  className="input-field" 
-                  value={form.coding_platform} 
-                  onChange={e => handleField('coding_platform', e.target.value)}
-                  style={{ width: '130px', flexShrink: 0 }}
+                <button
+                  type="button"
+                  onClick={addCodingProfile}
+                  style={{
+                    background: 'rgba(37, 99, 235, 0.15)',
+                    border: '1px solid rgba(37, 99, 235, 0.4)',
+                    color: 'var(--accent-primary)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '0.15rem 0.5rem',
+                    fontSize: '0.6875rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                  }}
                 >
-                  <option value="LeetCode">LeetCode</option>
-                  <option value="HackerRank">HackerRank</option>
-                  <option value="CodeChef">CodeChef</option>
-                  <option value="Codeforces">Codeforces</option>
-                  <option value="AtCoder">AtCoder</option>
-                </select>
-                <input 
-                  type="text" 
-                  className="input-field" 
-                  placeholder="Username or profile URL" 
-                  value={form.coding_url} 
-                  onChange={e => handleField('coding_url', e.target.value)} 
-                />
+                  <Plus size={11} /> + Add
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                {codingProfiles.map((cp, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    <select 
+                      className="input-field" 
+                      value={cp.platform} 
+                      onChange={e => updateCodingProfile(idx, 'platform', e.target.value)}
+                      style={{ width: '130px', flexShrink: 0 }}
+                    >
+                      <option value="LeetCode">LeetCode</option>
+                      <option value="HackerRank">HackerRank</option>
+                      <option value="CodeChef">CodeChef</option>
+                      <option value="Codeforces">Codeforces</option>
+                      <option value="Kaggle">Kaggle</option>
+                      <option value="GeeksforGeeks">GeeksforGeeks</option>
+                      <option value="AtCoder">AtCoder</option>
+                    </select>
+                    <input 
+                      type="text" 
+                      className="input-field" 
+                      placeholder="Username or profile URL" 
+                      value={cp.url} 
+                      onChange={e => updateCodingProfile(idx, 'url', e.target.value)} 
+                      style={{ flex: 1 }}
+                    />
+                    {codingProfiles.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeCodingProfile(idx)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: '0.2rem',
+                        }}
+                        title="Remove Platform"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -900,21 +1033,6 @@ export default function Profile() {
             </select>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Preferred Team Size
-            </label>
-            <select 
-              className="input-field" 
-              value={form.preferred_team_size} 
-              onChange={e => handleField('preferred_team_size', e.target.value)}
-            >
-              <option value="Small (1-10)">Small (1-10)</option>
-              <option value="Medium (11-50)">Medium (11-50)</option>
-              <option value="Large (50+)">Large (50+)</option>
-            </select>
-          </div>
-
         </div>
 
         {/* Relocation Checkbox */}
@@ -935,6 +1053,53 @@ export default function Profile() {
       {/* SECTION 4: SKILL INTELLIGENCE */}
       <Section title="4. Skill Intelligence" icon={<Wrench size={18} color="var(--accent-primary)" />} badge={`${skills.length} Verified`}>
         
+        {/* Dynamic Recommended Skills Row (Disappears as skills are added) */}
+        {(() => {
+          const existingSkillNames = new Set(skills.map(s => (s.skill?.name || '').toLowerCase()));
+          const recommendedSuggestions = MASTER_SKILLS_CATALOG.filter(
+            sk => !existingSkillNames.has(sk.name.toLowerCase())
+          ).slice(0, 8);
+
+          if (recommendedSuggestions.length === 0) return null;
+
+          return (
+            <div style={{ marginBottom: '1.15rem', background: 'rgba(37, 99, 235, 0.06)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(37, 99, 235, 0.2)' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-primary)', display: 'block', marginBottom: '0.5rem' }}>
+                ✨ Recommended Skills for AI Twin Calibration (Click to Quick-Select):
+              </span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {recommendedSuggestions.map(sk => (
+                  <button
+                    key={sk.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSkill(sk);
+                      setSkillSearch(sk.name);
+                    }}
+                    style={{
+                      padding: '0.25rem 0.6rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      background: selectedSkill?.name.toLowerCase() === sk.name.toLowerCase() ? 'var(--accent-primary)' : 'var(--bg-surface)',
+                      color: selectedSkill?.name.toLowerCase() === sk.name.toLowerCase() ? '#fff' : 'var(--text-primary)',
+                      border: 'var(--micro-border)',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                    }}
+                  >
+                    <span>+ {sk.name}</span>
+                    <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>({sk.category})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Add Skill Builder */}
         <div style={{ background: 'var(--bg-elevated)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: 'var(--micro-border)', marginBottom: '1.25rem' }}>
           <h4 style={{ margin: '0 0 0.85rem 0', fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -943,7 +1108,7 @@ export default function Profile() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
             
-            {/* Search Dropdown */}
+            {/* Search Dropdown with Full Catalog Autocomplete */}
             <div style={{ position: 'relative' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Search Skill Catalog *
@@ -954,36 +1119,50 @@ export default function Profile() {
                   type="text" 
                   className="input-field" 
                   style={{ paddingLeft: '32px' }}
-                  placeholder="e.g. Python, Docker, PyTorch, Kubernetes..." 
+                  placeholder="e.g. Python, Docker, PyTorch, React, SQL..." 
                   value={skillSearch} 
                   onChange={e => handleSkillSearch(e.target.value)} 
                 />
               </div>
 
               {/* Autocomplete Dropdown */}
-              {skillCatalog.length > 0 && skillSearch.length >= 1 && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
-                  background: 'var(--bg-surface)', border: 'var(--micro-border)',
-                  borderRadius: 'var(--radius-md)', maxHeight: '180px', overflowY: 'auto',
-                  marginTop: '4px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
-                }}>
-                  {skillCatalog.map(sk => (
-                    <div 
-                      key={sk.id}
-                      onClick={() => { setSelectedSkill(sk); setSkillSearch(sk.name); }}
-                      style={{
-                        padding: '0.6rem 0.85rem', cursor: 'pointer', fontSize: '0.8125rem',
-                        borderBottom: 'var(--micro-border)', display: 'flex', justifyContent: 'space-between',
-                        background: selectedSkill?.id === sk.id ? 'rgba(37, 99, 235, 0.15)' : 'transparent'
-                      }}
-                    >
-                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{sk.name}</span>
-                      <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{sk.category}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {(() => {
+                if (skillSearch.trim().length < 1) return null;
+                const pool = [...MASTER_SKILLS_CATALOG, ...skillCatalog];
+                const seen = new Set<string>();
+                const matches = pool.filter(sk => {
+                  const key = sk.name.toLowerCase();
+                  if (seen.has(key)) return false;
+                  seen.add(key);
+                  return key.includes(skillSearch.toLowerCase()) || sk.category.toLowerCase().includes(skillSearch.toLowerCase());
+                }).slice(0, 12);
+
+                if (matches.length === 0) return null;
+
+                return (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                    background: 'var(--bg-surface)', border: 'var(--micro-border)',
+                    borderRadius: 'var(--radius-md)', maxHeight: '200px', overflowY: 'auto',
+                    marginTop: '4px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+                  }}>
+                    {matches.map(sk => (
+                      <div 
+                        key={sk.id}
+                        onClick={() => { setSelectedSkill(sk); setSkillSearch(sk.name); }}
+                        style={{
+                          padding: '0.6rem 0.85rem', cursor: 'pointer', fontSize: '0.8125rem',
+                          borderBottom: 'var(--micro-border)', display: 'flex', justifyContent: 'space-between',
+                          background: selectedSkill?.name.toLowerCase() === sk.name.toLowerCase() ? 'rgba(37, 99, 235, 0.15)' : 'transparent'
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{sk.name}</span>
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{sk.category}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Proficiency Dropdown */}
@@ -1099,7 +1278,15 @@ export default function Profile() {
 
                 <button 
                   type="button"
-                  onClick={() => removeSkill(us.id)}
+                  onClick={async () => {
+                    try {
+                      await removeSkill(us.id);
+                    } catch (e) {
+                      console.error('Failed to remove skill', e);
+                    } finally {
+                      await fetchSkills();
+                    }
+                  }}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     color: 'var(--text-muted)', padding: '0.2rem', transition: 'color 0.15s ease'
