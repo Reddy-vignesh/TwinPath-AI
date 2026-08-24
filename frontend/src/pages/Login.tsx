@@ -174,25 +174,29 @@ export default function Login() {
         fetchUser().catch(() => {});
       }
       
-      // 5. Fast, smooth 200ms transition to dashboard
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // 5. Rich, smooth 1200ms holographic entrance animation to dashboard
+      await new Promise(resolve => setTimeout(resolve, 1200));
       navigate('/dashboard');
     } catch (err: any) {
       setIsEnteringWeb(false);
-      let msg = 'Authentication failed.';
+      let msg = 'Invalid credentials or authentication failed.';
       if (err.response?.data) {
         const data = err.response.data;
         if (data.message) {
           msg = data.message;
         } else if (data.detail) {
           if (Array.isArray(data.detail)) {
-            msg = data.detail.map((d: any) => d.msg).join(', ');
+            msg = data.detail.map((d: any) => d.msg || d.message).join(', ');
           } else {
             msg = data.detail;
           }
+        } else if (data.error) {
+          msg = data.error;
         }
+      } else if (err.message && err.message !== 'Network Error') {
+        msg = err.message;
       } else if (!err.response) {
-        msg = 'Cannot connect to server. Please check your network or server status.';
+        msg = 'Invalid credentials or unable to reach server. Please check your credentials.';
       }
       setError(msg);
     } finally {
