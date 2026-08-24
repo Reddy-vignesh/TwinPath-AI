@@ -164,7 +164,7 @@ export default function Profile() {
     profile, skills, skillCatalog,
     isLoading, isSaving, isLoadingSkills,
     fetchProfile, updateProfile, fetchSkills,
-    searchSkillCatalog, addSkill, removeSkill,
+    searchSkillCatalog, removeSkill,
   } = useProfileStore();
 
   // User identity names
@@ -464,34 +464,33 @@ export default function Profile() {
   };
 
   const handleAddSkill = async () => {
-    if (!selectedSkill) {
+    if (!selectedSkill && !skillSearch.trim()) {
       setSkillError('Select a skill from the catalog dropdown first.');
       return;
     }
     setSkillError('');
     setAddingSkill(true);
     try {
+      const skillName = selectedSkill ? selectedSkill.name : skillSearch.trim();
+      const skillCat = selectedSkill ? selectedSkill.category : 'Other';
       const sourceStr = selectedContexts.length > 0 ? selectedContexts.join(', ') : 'Personal Projects';
-      await addSkill(selectedSkill.id, mapProficiencyToNumber(proficiencyLevel), undefined);
 
-      // Update skill source
-      try {
-        await apiClient.post('/skills', {
-          skill_id: selectedSkill.id,
-          proficiency_level: mapProficiencyToNumber(proficiencyLevel),
-          source: sourceStr,
-        });
-      } catch {
-        // Fallback handled by store
-      }
+      // Post skill directly to endpoint with name and category fallback
+      await apiClient.post('/skills', {
+        skill_name: skillName,
+        category: skillCat,
+        proficiency_level: mapProficiencyToNumber(proficiencyLevel),
+        source: sourceStr,
+      });
 
       await fetchSkills();
       setSelectedSkill(null);
       setSkillSearch('');
+      setIsSkillDropdownOpen(false);
       setProficiencyLevel('Intermediate');
       setSelectedContexts(['Personal Projects']);
     } catch (e: any) {
-      setSkillError(e.message || 'Failed to add skill.');
+      setSkillError(e.response?.data?.message || e.message || 'Failed to add skill.');
     } finally {
       setAddingSkill(false);
     }
