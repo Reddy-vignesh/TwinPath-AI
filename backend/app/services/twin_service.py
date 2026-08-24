@@ -148,17 +148,47 @@ class TwinDataService:
     ) -> UserSkill:
         profile_id = await self._get_profile_id(user_id)
 
-        # Check skill exists in catalog
-        skill = await self.skill_catalog_repo.get_by_id(data.skill_id)
+        skill = None
+        if data.skill_id:
+            skill = await self.skill_catalog_repo.get_by_id(data.skill_id)
+
+        if not skill and data.skill_name:
+            skill = await self.skill_catalog_repo.get_by_name(data.skill_name.strip())
+            if not skill:
+                from app.models.skill import Skill
+                skill = Skill(
+                    name=data.skill_name.strip(),
+                    category=data.category or "Other",
+                    is_verified=True,
+                )
+                skill = await self.skill_catalog_repo.create(skill)
+                await self.session.commit()
+
         if not skill:
-            raise NotFoundException(message="Skill not found in catalog.")
+            raise NotFoundException(message="Skill not found in catalog. Please specify a valid skill.")
 
         # Check for duplicate
         existing = await self.user_skill_repo.get_by_profile_and_skill(
-            profile_id, data.skill_id
+            profile_id, skill.id
         )
         if existing:
-            raise ConflictException(message="Skill already added to profile.")
+            # If already exists, update proficiency and source instead of throwing error
+            existing.proficiency_level = data.proficiency_level
+            if data.years_experience is not None:
+                existing.years_experience = data.years_experience
+            profile = await self.profile_repo.get_by_id(profile_id)
+            weight, enriched_source, is_verified = self.calculate_skill_verification_weight(
+                profile=profile,
+                skill_name=skill.name,
+                requested_source=data.source,
+                proficiency_level=data.proficiency_level,
+            )
+            existing.source = enriched_source
+            existing.is_primary = existing.is_primary or is_verified
+            await self.session.commit()
+            await self.session.refresh(existing)
+            await self._sync_completeness(user_id)
+            return existing
 
         # Run verification pipeline
         profile = await self.profile_repo.get_by_id(profile_id)
