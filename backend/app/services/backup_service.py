@@ -67,15 +67,20 @@ def create_database_backup() -> str | None:
             source_db = candidate.resolve()
             break
 
-    if not source_db:
-        # Check database_url in settings
-        if settings.database_url and "sqlite" in settings.database_url:
-            path_part = settings.database_url.replace("sqlite+aiosqlite:///", "").replace("sqlite:///", "")
-            if os.path.exists(path_part):
-                source_db = Path(path_part).resolve()
+    # In production with cloud PostgreSQL, snapshots are managed natively by Render/cloud provider
+    if settings.database_url and ("postgres" in settings.database_url or "postgresql" in settings.database_url):
+        logger.info(
+            "automated_backup_managed_externally",
+            db_type="postgresql",
+            message="Cloud PostgreSQL backups are handled by provider snapshots."
+        )
+        return None
 
     if not source_db or not source_db.exists():
-        logger.warning("backup_skipped_no_database_file_found")
+        logger.info(
+            "automated_backup_skipped_no_local_file",
+            message="Local SQLite database file not present on disk."
+        )
         return None
 
     temp_snapshot = backup_dir / f"snapshot_{now_str}.db"
