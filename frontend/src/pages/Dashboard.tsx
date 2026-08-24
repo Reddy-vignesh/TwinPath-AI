@@ -191,13 +191,19 @@ export default function Dashboard() {
             </span>
             <CheckCircle2 size={14} color="var(--text-muted)" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem', marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>
               {totalSkills}
             </span>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', fontWeight: 500 }}>
-              / 12 recommended
-            </span>
+            {totalSkills >= 12 ? (
+              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--success)', background: 'rgba(16, 185, 129, 0.12)', padding: '0.1rem 0.45rem', borderRadius: 'var(--radius-sm)' }}>
+                Target Met (12+ skills)
+              </span>
+            ) : (
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', fontWeight: 500 }}>
+                / 12 target
+              </span>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.85rem' }}>
