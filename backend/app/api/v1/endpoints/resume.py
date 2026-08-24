@@ -74,10 +74,10 @@ async def upload_resume(
         lines = [line.strip() for line in text_clean.split("\n") if line.strip()]
 
         # ── 1. Extract Links (GitHub, LinkedIn, Portfolio) ─────────────────
-        github_match = re.search(r'(?:https?://)?(?:www\.)?github\.com/([a-zA-Z0-9_-]+)', text_clean, re.IGNORECASE)
+        github_match = re.search(r'(?:https?://)?(?:www\.)?github\.com/([a-zA-Z0-9_\-]+)', text_clean, re.IGNORECASE)
         github_url = f"https://github.com/{github_match.group(1)}" if github_match else None
 
-        linkedin_match = re.search(r'(?:https?://)?(?:www\.)?linkedin\.com/in/([a-zA-Z0-9_-%]+)', text_clean, re.IGNORECASE)
+        linkedin_match = re.search(r'(?:https?://)?(?:www\.)?linkedin\.com/in/([a-zA-Z0-9_\-%]+)', text_clean, re.IGNORECASE)
         linkedin_url = f"https://linkedin.com/in/{linkedin_match.group(1)}" if linkedin_match else None
 
         portfolio_match = re.search(r'https?://(?!github\.com|linkedin\.com|google\.com|gmail\.com)[\w\.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?', text_clean, re.IGNORECASE)
