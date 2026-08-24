@@ -438,6 +438,29 @@ export default function Profile() {
     }
   };
 
+  const [addingQuickSkillId, setAddingQuickSkillId] = useState<string | null>(null);
+
+  const handleQuickSelectSkill = async (sk: SkillCatalogItem) => {
+    setAddingQuickSkillId(sk.id);
+    try {
+      await addSkill(sk.id, mapProficiencyToNumber('Intermediate'), undefined);
+      try {
+        await apiClient.post('/skills', {
+          skill_id: sk.id,
+          proficiency_level: mapProficiencyToNumber('Intermediate'),
+          source: 'Personal Projects, Academic',
+        });
+      } catch {
+        // Handled by store
+      }
+      await fetchSkills();
+    } catch (err) {
+      console.error('Quick select add skill error', err);
+    } finally {
+      setAddingQuickSkillId(null);
+    }
+  };
+
   const handleAddSkill = async () => {
     if (!selectedSkill) {
       setSkillError('Select a skill from the catalog dropdown first.');
@@ -1090,6 +1113,72 @@ export default function Profile() {
 
       {/* SECTION 4: SKILL INTELLIGENCE */}
       <Section title="4. Skill Intelligence" icon={<Wrench size={18} color="var(--accent-primary)" />} badge={`${skills.length} Verified`}>
+
+        {/* Quick Select Bar (Instantly removes clicked tag and adds to verified skills) */}
+        {(() => {
+          const existingSkillNames = new Set(skills.map(s => (s.skill?.name || '').toLowerCase()));
+          const quickSelectSkills = MASTER_SKILLS_CATALOG.filter(
+            sk => !existingSkillNames.has(sk.name.toLowerCase()) && addingQuickSkillId !== sk.id
+          ).slice(0, 10);
+
+          if (quickSelectSkills.length === 0) return null;
+
+          return (
+            <div style={{
+              background: 'rgba(37, 99, 235, 0.05)',
+              border: '1px solid rgba(37, 99, 235, 0.2)',
+              borderRadius: 'var(--radius-md)',
+              padding: '0.85rem 1rem',
+              marginBottom: '1.25rem',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  ⚡ Quick Select (Click to instantly add to verified skills):
+                </span>
+                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                  Tags disappear immediately upon selection
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                {quickSelectSkills.map(sk => (
+                  <button
+                    key={sk.id}
+                    type="button"
+                    onClick={() => handleQuickSelectSkill(sk)}
+                    disabled={addingQuickSkillId === sk.id}
+                    style={{
+                      padding: '0.3rem 0.65rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      background: 'var(--bg-surface)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                      e.currentTarget.style.color = 'var(--accent-primary)';
+                      e.currentTarget.style.background = 'rgba(37, 99, 235, 0.1)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.color = 'var(--text-primary)';
+                      e.currentTarget.style.background = 'var(--bg-surface)';
+                    }}
+                  >
+                    <span>+ {sk.name}</span>
+                    <span style={{ fontSize: '0.65rem', opacity: 0.6 }}>({sk.category})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Add Skill Builder */}
         <div style={{ background: 'var(--bg-elevated)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: 'var(--micro-border)', marginBottom: '1.25rem' }}>
