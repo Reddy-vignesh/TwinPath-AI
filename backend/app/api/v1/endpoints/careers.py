@@ -47,12 +47,47 @@ async def list_careers(
     else:
         careers = await repo.get_all_active(limit=limit)
     
-    result_data = [CareerSummaryRead.model_validate(c).model_dump(mode="json") for c in careers]
+    # Fallback to in-memory seed data if DB is not yet populated
+    if not careers:
+        from app.ml.seed_data import CAREER_SEED_DATA
+        import uuid as _uuid
+        seed_matches = []
+        for c in CAREER_SEED_DATA:
+            if category and category.lower() != 'all' and c.get("category", "").lower() != category.lower():
+                continue
+            if q and q.lower() not in c.get("title", "").lower() and q.lower() not in (c.get("description") or "").lower():
+                continue
+            item = dict(c)
+            if "id" not in item or not isinstance(item["id"], _uuid.UUID):
+                try:
+                    item["id"] = _uuid.UUID(str(item.get("id")))
+                except Exception:
+                    item["id"] = _uuid.uuid5(_uuid.NAMESPACE_DNS, item.get("title", "career"))
+            seed_matches.append(item)
+            if len(seed_matches) >= limit:
+                break
+        result_data = [
+            {
+                "id": str(item["id"]),
+                "title": item["title"],
+                "category": item.get("category", "software_engineering"),
+                "short_description": item.get("short_description"),
+                "median_salary_usd": item.get("median_salary_usd"),
+                "market_demand": item.get("market_demand", "high"),
+                "growth_rate_percent": item.get("growth_rate_percent", 15.0),
+                "automation_risk_percent": item.get("automation_risk_percent", 10.0),
+                "typical_experience_years": item.get("typical_experience_years", 2),
+            }
+            for item in seed_matches
+        ]
+    else:
+        result_data = [CareerSummaryRead.model_validate(c).model_dump(mode="json") for c in careers]
+
     await catalog_cache.set(cache_key, result_data, ttl_seconds=600)
 
     return success_response(
         data=result_data,
-        message=f"Found {len(careers)} careers.",
+        message=f"Found {len(result_data)} careers.",
     )
 
 
@@ -72,6 +107,29 @@ async def get_career(
     repo = CareerRepository(session)
     career = await repo.get_by_id(career_id)
     if not career:
+        from app.ml.seed_data import CAREER_SEED_DATA
+        for c in CAREER_SEED_DATA:
+            cid_str = str(c.get("id"))
+            if str(career_id) == cid_str or str(career_id) == str(uuid.uuid5(uuid.NAMESPACE_DNS, c.get("title", ""))):
+                result_data = {
+                    "id": str(career_id),
+                    "title": c["title"],
+                    "category": c.get("category", "software_engineering"),
+                    "short_description": c.get("short_description"),
+                    "description": c.get("description"),
+                    "median_salary_usd": c.get("median_salary_usd"),
+                    "salary_range_low": c.get("salary_range_low"),
+                    "salary_range_high": c.get("salary_range_high"),
+                    "market_demand": c.get("market_demand", "high"),
+                    "growth_rate_percent": c.get("growth_rate_percent", 15.0),
+                    "automation_risk_percent": c.get("automation_risk_percent", 10.0),
+                    "required_skills": c.get("required_skills", {}),
+                    "preferred_skills": c.get("preferred_skills", {}),
+                    "required_education": c.get("required_education", "Bachelor's"),
+                    "typical_experience_years": c.get("typical_experience_years", 2),
+                    "is_active": True,
+                }
+                return success_response(data=result_data, message="Career retrieved.")
         from app.core.exceptions import NotFoundException
         raise NotFoundException(message="Career not found.")
     
