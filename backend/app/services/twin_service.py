@@ -241,21 +241,37 @@ class TwinDataService:
         return user_skill
 
     async def remove_skill(
-        self, user_id: uuid.UUID, user_skill_id: uuid.UUID
+        self, user_id: uuid.UUID, user_skill_id: uuid.UUID | str
     ) -> None:
         profile_id = await self._get_profile_id(user_id)
-        user_skill = await self.user_skill_repo.get_by_id(user_skill_id)
+        user_skills = await self.user_skill_repo.get_by_profile(profile_id)
+        
+        target = None
+        str_id = str(user_skill_id).strip().lower()
+        for us in user_skills:
+            if str(us.id).lower() == str_id:
+                target = us
+                break
+            if str(us.skill_id).lower() == str_id:
+                target = us
+                break
+            if us.skill and us.skill.name.lower() == str_id:
+                target = us
+                break
 
-        if not user_skill or user_skill.profile_id != profile_id:
-            alt_skills = await self.user_skill_repo.get_by_profile(profile_id)
-            match = next((s for s in alt_skills if s.skill_id == user_skill_id or s.id == user_skill_id), None)
-            if match:
-                user_skill = match
-                user_skill_id = match.id
-            else:
-                raise NotFoundException(message="User skill not found.")
+        if not target:
+            try:
+                parsed_uuid = uuid.UUID(str(user_skill_id))
+                target = await self.user_skill_repo.get_by_id(parsed_uuid)
+                if target and target.profile_id != profile_id:
+                    target = None
+            except Exception:
+                target = None
 
-        await self.user_skill_repo.delete(user_skill_id)
+        if not target:
+            raise NotFoundException(message="User skill not found.")
+
+        await self.user_skill_repo.delete(target.id)
         await self.session.commit()
         await self._sync_completeness(user_id)
 
