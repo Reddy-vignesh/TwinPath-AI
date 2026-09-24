@@ -118,6 +118,11 @@ async def dispose_engine() -> None:
         _session_factory = None
 
 
+def async_session_factory() -> AsyncSession:
+    """Convenience callable returning a new request-scoped AsyncSession."""
+    return get_session_factory()()
+
+
 async def set_sqlite_engine() -> AsyncEngine:
     """Fallback database engine using local SQLite when PostgreSQL is offline."""
     global _engine, _session_factory  # noqa: PLW0603
@@ -128,6 +133,7 @@ async def set_sqlite_engine() -> AsyncEngine:
     _engine = create_async_engine(
         "sqlite+aiosqlite:///./decisiontwin.db",
         echo=False,
+        connect_args={"check_same_thread": False, "timeout": 30},
     )
     _session_factory = async_sessionmaker(
         bind=_engine,
