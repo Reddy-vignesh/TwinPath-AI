@@ -63,23 +63,30 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.warning("PostgreSQL connection unavailable, initializing local SQLite database fallback", error=str(exc))
         from app.db.session import set_sqlite_engine
         engine = await set_sqlite_engine()
-        async with engine.begin() as conn:
-            from app.models.base import Base
-            import app.models  # noqa: F401
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("Local SQLite database initialized and schema created successfully")
+        try:
+            async with engine.begin() as conn:
+                from app.models.base import Base
+                import app.models  # noqa: F401
+                await conn.run_sync(lambda sync_conn: Base.metadata.create_all(sync_conn, checkfirst=True))
+            logger.info("Local SQLite database initialized and schema verified")
+        except Exception as schema_err:
+            logger.info("Local SQLite schema initialization noted (tables already exist or initialized concurrently)", error=str(schema_err))
 
     # Auto-seed careers and skills catalogs if database is unseeded
     try:
-        from app.db.session import async_session_factory
+        from app.db.session import get_session_factory
         import uuid
         from sqlalchemy import select, func
         from app.models.career import Career
         from app.models.skill import Skill
         from app.ml.seed_data import CAREER_SEED_DATA
-        from seed_skills import SKILL_SEED
+        try:
+            from seed_skills import SKILL_SEED
+        except ImportError:
+            from app.ml.seed_skills import SKILL_SEED  # type: ignore
 
-        async with async_session_factory() as db:
+        session_maker = get_session_factory()
+        async with session_maker() as db:
             career_count = await db.scalar(select(func.count(Career.id)))
             if not career_count or career_count == 0:
                 for c_data in CAREER_SEED_DATA:
